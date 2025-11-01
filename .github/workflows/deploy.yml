@@ -88,86 +88,42 @@ jobs:
   # =================================================================
   deploy:
     name: Deploy to EC2
-    needs: test  # Only run if tests pass
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add EC2 to known hosts
+      - name: Trigger Deployment Webhook
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          echo "=== Triggering deployment via webhook ==="
+          response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "X-Deploy-Token: ${{ secrets.WEBHOOK_SECRET }}" \
+            http://${{ secrets.EC2_HOST }}:8000/deploy)
 
-      - name: Deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            echo "=== Connected to EC2 ==="
-            cd /home/ec2-user/app
-            echo "App directory: $(pwd)"
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
 
-            echo ""
-            echo "=== Pulling latest code from GitHub ==="
-            git fetch origin
-            git reset --hard origin/main
-            echo "Code updated to: $(git log --oneline -1)"
-
-            echo ""
-            echo "=== Stopping containers ==="
-            docker-compose down || true
-
-            echo ""
-            echo "=== Rebuilding Docker image ==="
-            docker-compose build --no-cache
-
-            echo ""
-            echo "=== Starting containers ==="
-            docker-compose up -d
-
-            echo ""
-            echo "=== Waiting 10 seconds ==="
-            sleep 10
-
-            echo ""
-            echo "=== Container Status ==="
-            docker ps
-
-            echo ""
-            echo "=== Recent Logs ==="
-            docker-compose logs --tail=20
-
-            echo ""
-            echo "=== Deployment Complete! ==="
-          EOF
-
-      - name: Health Check
-        run: |
-          echo "=== Running Health Check ==="
-          sleep 5
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:5000/api/health || echo "000")
-
-          if [ "$response" = "200" ]; then
-            echo "Health check PASSED - Application is running!"
-            echo "URL: http://${{ secrets.EC2_HOST }}:5000"
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Deployment triggered successfully!"
+            echo "$body"
           else
-            echo "Health check FAILED - Got response code: $response"
-            echo "Please check the application logs"
+            echo "❌ Deployment failed with code: $http_code"
+            echo "$body"
             exit 1
           fi
 
-      - name: Deployment Summary
-        if: always()
+      - name: Health Check
         run: |
-          echo "=== Deployment Summary ==="
-          echo "Repository: ${{ github.repository }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Triggered by: ${{ github.actor }}"
-          echo "Application URL: http://${{ secrets.EC2_HOST }}:5000"
-          echo "======================================="
+          echo "=== Waiting for deployment to complete ==="
+          sleep 20
+
+          echo "=== Running Health Check ==="
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:5000/api/health || echo "000")
+
+          if [ "$response" = "200" ]; then
+            echo "✅ Deployment successful!"
+            echo "🌐 App URL: http://${{ secrets.EC2_HOST }}:5000"
+          else
+            echo "⚠️ Health check response: $response"
+            echo "App might still be starting..."
+          fi

@@ -55,4 +55,9 @@ temp/
 *.log
 
 # Docker
-*.tarGITHUB_SECRETS_VALUES.txt
+*.tar
+
+# Secrets and sensitive files
+GITHUB_SECRETS_VALUES.txt
+ssh_key_base64.txt
+codedetect-key*
