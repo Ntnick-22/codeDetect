@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Main application
+  codedetect:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codedetect-app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=sqlite:////app/instance/codedetect.db
+      - FLASK_ENV=production
+    volumes:
+      # Persist database
+      - codedetect-data:/app/instance
+      # Persist uploads
+      - codedetect-uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - codedetect-network
+
+networks:
+  codedetect-network:
+    driver: bridge
+
+volumes:
+  codedetect-data:
+  codedetect-uploads:

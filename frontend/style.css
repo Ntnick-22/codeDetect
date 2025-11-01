@@ -1,0 +1,129 @@
+/* Main Styles */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.main-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Card Styles */
+.card {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+}
+
+/* Upload Area */
+.upload-area {
+    border: 3px dashed #667eea;
+    border-radius: 15px;
+    padding: 40px;
+    text-align: center;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    background: #e9ecef;
+    border-color: #764ba2;
+}
+
+/* Score Circle */
+.score-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: bold;
+    color: white;
+    margin: 0 auto;
+}
+
+.score-good { 
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
+}
+
+.score-medium { 
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+}
+
+.score-bad { 
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); 
+}
+
+/* Issue Badges */
+.issue-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.severity-HIGH { 
+    background: #dc3545; 
+    color: white; 
+}
+
+.severity-MEDIUM { 
+    background: #ffc107; 
+    color: black; 
+}
+
+.severity-LOW { 
+    background: #17a2b8; 
+    color: white; 
+}
+
+/* Results Section */
+#results {
+    display: none;
+}
+
+/* Chart Container Sizing */
+#issueTypeChart, #severityChart {
+    max-height: 250px !important;
+}
+
+.card-body canvas {
+    max-height: 250px !important;
+}
+
+/* Issue Details Styling */
+.issue-details {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+[data-theme="dark"] .issue-details {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.alert {
+    position: relative;
+}
+
+.btn-outline-danger:hover,
+.btn-outline-secondary:hover {
+    transform: scale(1.02);
+}
+
+/* Download Button */
+#downloadBtn {
+    display: none;
+}
+
+#downloadBtn:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s;
+}

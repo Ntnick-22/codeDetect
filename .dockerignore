@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Database (will be in volume)
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Uploads (will be in volume)
+uploads/
+
+# Logs
+*.log
+
+# Documentation
+docs/
+README.md
+
+# Tests
+tests/
+*.pytest_cache/
+
+# Environment
+.env
+.env.local
