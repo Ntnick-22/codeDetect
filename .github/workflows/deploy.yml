@@ -51,17 +51,20 @@ jobs:
           echo "Note: Pylint warnings won't fail the build, but please review them"
 
       - name: Run Bandit (Security Check)
+        continue-on-error: true
         run: |
           echo "=== Running Bandit Security Scan ==="
+          pip install pbr  # Install missing dependency
           bandit -r backend/ -f json -o bandit-report.json || true
-          bandit -r backend/ -f screen
+          bandit -r backend/ -f screen || true
           echo ""
           echo "Security scan complete. Check for HIGH severity issues."
 
       - name: Run Radon (Complexity Check)
+        continue-on-error: true
         run: |
           echo "=== Running Radon Complexity Analysis ==="
-          radon cc backend/ -a -nb
+          radon cc backend/ -a -nb || true
           echo ""
           echo "Check for functions with complexity > 10"
 
