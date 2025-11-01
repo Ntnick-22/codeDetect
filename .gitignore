@@ -55,4 +55,4 @@ temp/
 *.log
 
 # Docker
-*.tar
+*.tarGITHUB_SECRETS_VALUES.txt
