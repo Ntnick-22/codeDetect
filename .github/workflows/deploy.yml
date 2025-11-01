@@ -1,0 +1,182 @@
+name: Deploy to EC2
+
+# When to run this workflow
+on:
+  push:
+    branches:
+      - main  # Run on every push to main branch
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+# Environment variables available to all jobs
+env:
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  APP_DIR: /home/ec2-user/app
+
+jobs:
+  # =================================================================
+  # JOB 1: TEST & QUALITY CHECKS
+  # =================================================================
+  test:
+    name: Run Tests & Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Pylint (Code Quality)
+        run: |
+          echo "=== Running Pylint ==="
+          pylint backend/app.py --exit-zero --output-format=colorized || true
+          echo ""
+          echo "Note: Pylint warnings won't fail the build, but please review them"
+
+      - name: Run Bandit (Security Check)
+        run: |
+          echo "=== Running Bandit Security Scan ==="
+          bandit -r backend/ -f json -o bandit-report.json || true
+          bandit -r backend/ -f screen
+          echo ""
+          echo "Security scan complete. Check for HIGH severity issues."
+
+      - name: Run Radon (Complexity Check)
+        run: |
+          echo "=== Running Radon Complexity Analysis ==="
+          radon cc backend/ -a -nb
+          echo ""
+          echo "Check for functions with complexity > 10"
+
+      - name: Test Docker Build
+        run: |
+          echo "=== Testing Docker Build ==="
+          docker build -t codedetect-test:${{ github.sha }} .
+          echo "Docker build successful!"
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            bandit-report.json
+          retention-days: 30
+
+  # =================================================================
+  # JOB 2: DEPLOY TO EC2
+  # =================================================================
+  deploy:
+    name: Deploy to EC2
+    needs: test  # Only run if tests pass
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          echo "=== Setting up SSH ==="
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          echo "SSH setup complete"
+
+      - name: Deploy to EC2
+        run: |
+          echo "=== Deploying to EC2 ==="
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            set -e  # Exit on any error
+
+            echo "Connected to EC2 instance"
+            echo "Current directory: $(pwd)"
+
+            # Navigate to app directory
+            cd ${{ env.APP_DIR }}
+            echo "App directory: $(pwd)"
+
+            # Pull latest code from GitHub
+            echo ""
+            echo "=== Pulling latest code from GitHub ==="
+            git fetch origin
+            git reset --hard origin/main
+            echo "Code updated to: $(git log --oneline -1)"
+
+            # Stop current containers
+            echo ""
+            echo "=== Stopping current containers ==="
+            docker-compose down
+
+            # Rebuild Docker image with latest code
+            echo ""
+            echo "=== Rebuilding Docker image ==="
+            docker-compose build --no-cache
+
+            # Start containers
+            echo ""
+            echo "=== Starting containers ==="
+            docker-compose up -d
+
+            # Wait for container to be healthy
+            echo ""
+            echo "=== Waiting for container to be healthy ==="
+            sleep 10
+
+            # Check container status
+            echo ""
+            echo "=== Container Status ==="
+            docker ps
+
+            # Show recent logs
+            echo ""
+            echo "=== Recent Application Logs ==="
+            docker-compose logs --tail=20
+
+            echo ""
+            echo "=== Deployment Complete! ==="
+          ENDSSH
+
+      - name: Health Check
+        run: |
+          echo "=== Running Health Check ==="
+          sleep 5
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:5000/api/health || echo "000")
+
+          if [ "$response" = "200" ]; then
+            echo "Health check PASSED - Application is running!"
+            echo "URL: http://${{ secrets.EC2_HOST }}:5000"
+          else
+            echo "Health check FAILED - Got response code: $response"
+            echo "Please check the application logs"
+            exit 1
+          fi
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Application URL: http://${{ secrets.EC2_HOST }}:5000"
+          echo "======================================="
