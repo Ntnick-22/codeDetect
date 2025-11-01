@@ -95,63 +95,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up SSH
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: 'placeholder'  # Will be replaced below
+
+      - name: Add Known Hosts
         run: |
-          echo "=== Setting up SSH ==="
-
-          # Debug: Check if secrets are available
-          if [ -z "${{ secrets.EC2_HOST }}" ]; then
-            echo "ERROR: EC2_HOST secret is not set!"
-            echo "Please add EC2_HOST secret in GitHub repository settings"
-            exit 1
-          fi
-
-          if [ -z "${{ secrets.EC2_USER }}" ]; then
-            echo "ERROR: EC2_USER secret is not set!"
-            echo "Please add EC2_USER secret in GitHub repository settings"
-            exit 1
-          fi
-
-          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "ERROR: SSH_PRIVATE_KEY secret is not set!"
-            echo "Please add SSH_PRIVATE_KEY secret in GitHub repository settings"
-            exit 1
-          fi
-
-          echo "All secrets are present!"
-          echo "Connecting to: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-
-          mkdir -p ~/.ssh
-
-          # Debug: Check secret length (first 50 chars only, for security)
-          echo "Debug: SSH_PRIVATE_KEY length: $(echo "${{ secrets.SSH_PRIVATE_KEY }}" | wc -c)"
-          echo "Debug: First 50 chars: $(echo "${{ secrets.SSH_PRIVATE_KEY }}" | cut -c1-50)"
-
-          # Try decoding base64 SSH key (remove any whitespace first)
-          echo "Decoding SSH key from base64..."
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '[:space:]' | base64 -d > ~/.ssh/id_rsa 2>&1 || {
-            echo "ERROR: Base64 decode failed!"
-            echo "Trying without base64 (maybe it's already plain text)..."
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          }
-
-          chmod 600 ~/.ssh/id_rsa
-
-          # Verify key format
-          echo "Checking SSH key format..."
-          if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
-            echo "ERROR: SSH key format is still invalid!"
-            echo ""
-            echo "Key file first line:"
-            head -1 ~/.ssh/id_rsa
-            echo ""
-            echo "Please update SSH_PRIVATE_KEY secret with the base64 encoded value."
-            exit 1
-          fi
-
-          echo "SSH key format is valid! ✓"
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-          echo "SSH setup complete"
 
       - name: Deploy to EC2
         run: |
