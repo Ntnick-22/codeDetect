@@ -122,8 +122,25 @@ jobs:
           echo "Connecting to: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
 
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+
+          # Write SSH key with proper formatting (preserve line breaks)
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+          # Verify key format
+          echo "Checking SSH key format..."
+          if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
+            echo "ERROR: SSH key format is invalid!"
+            echo "The key might have been copied incorrectly to GitHub Secrets."
+            echo ""
+            echo "Please:"
+            echo "1. Go to GitHub Settings -> Secrets"
+            echo "2. Delete SSH_PRIVATE_KEY"
+            echo "3. Re-add it, making sure to copy the ENTIRE key including BEGIN/END lines"
+            exit 1
+          fi
+
+          echo "SSH key format is valid!"
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
           echo "SSH setup complete"
 
