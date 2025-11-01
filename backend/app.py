@@ -78,19 +78,23 @@ def allowed_file(filename):
 
 def upload_to_s3(filepath, bucket_name, s3_key):
     """Upload file to AWS S3"""
-    s3 = boto3.client('s3')
     try:
+        s3 = boto3.client('s3', region_name='eu-west-1')
+        print(f"🔄 Uploading {filepath} to s3://{bucket_name}/{s3_key}")
         s3.upload_file(filepath, bucket_name, s3_key)
-        print(f"✅ Uploaded {s3_key} to {bucket_name}")
+        print(f"✅ Successfully uploaded {s3_key} to {bucket_name}")
         return True
     except FileNotFoundError:
-        print("❌ File not found for upload.")
+        print(f"❌ File not found for upload: {filepath}")
         return False
     except NoCredentialsError:
-        print("❌ AWS credentials not available.")
+        print("❌ AWS credentials not available. Run 'aws configure'")
         return False
     except Exception as e:
-        print(f"❌ Upload failed: {e}")
+        print(f"❌ S3 Upload failed - Error type: {type(e).__name__}")
+        print(f"❌ S3 Upload error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -217,9 +221,14 @@ def analyze_code():
         bucket_name = os.environ.get(
             'S3_BUCKET_NAME', 'codedetect-nick-uploads-12345')
         s3_key = f"uploads/{unique_filename}"
+        print(f"📦 S3 Bucket: {bucket_name}")
+        print(f"🔑 S3 Key: {s3_key}")
         upload_success = upload_to_s3(filepath, bucket_name, s3_key)
+
         if not upload_success:
-            print("⚠️ S3 upload failed — continuing analysis anyway.")
+            print("⚠️ S3 upload failed - keeping local file for debugging")
+            # Clean up anyway to save space, but log the issue
+            # User can check console output for errors
 
         # Run analyses
         pylint_results = run_pylint(filepath)
