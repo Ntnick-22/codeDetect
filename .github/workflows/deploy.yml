@@ -123,24 +123,26 @@ jobs:
 
           mkdir -p ~/.ssh
 
-          # Write SSH key with proper formatting (preserve line breaks)
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          # Decode base64 SSH key and write to file
+          echo "Decoding SSH key from base64..."
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
           # Verify key format
           echo "Checking SSH key format..."
           if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
-            echo "ERROR: SSH key format is invalid!"
-            echo "The key might have been copied incorrectly to GitHub Secrets."
+            echo "ERROR: SSH key format is invalid after decoding!"
             echo ""
-            echo "Please:"
-            echo "1. Go to GitHub Settings -> Secrets"
-            echo "2. Delete SSH_PRIVATE_KEY"
-            echo "3. Re-add it, making sure to copy the ENTIRE key including BEGIN/END lines"
+            echo "The SSH_PRIVATE_KEY secret should contain the base64-encoded key."
+            echo ""
+            echo "To generate the correct value:"
+            echo "  base64 -w 0 codedetect-key"
+            echo ""
+            echo "Then copy the output and update the SSH_PRIVATE_KEY secret."
             exit 1
           fi
 
-          echo "SSH key format is valid!"
+          echo "SSH key format is valid! ✓"
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
           echo "SSH setup complete"
 
