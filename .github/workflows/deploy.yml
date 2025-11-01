@@ -98,6 +98,29 @@ jobs:
       - name: Set up SSH
         run: |
           echo "=== Setting up SSH ==="
+
+          # Debug: Check if secrets are available
+          if [ -z "${{ secrets.EC2_HOST }}" ]; then
+            echo "ERROR: EC2_HOST secret is not set!"
+            echo "Please add EC2_HOST secret in GitHub repository settings"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.EC2_USER }}" ]; then
+            echo "ERROR: EC2_USER secret is not set!"
+            echo "Please add EC2_USER secret in GitHub repository settings"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "ERROR: SSH_PRIVATE_KEY secret is not set!"
+            echo "Please add SSH_PRIVATE_KEY secret in GitHub repository settings"
+            exit 1
+          fi
+
+          echo "All secrets are present!"
+          echo "Connecting to: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
+
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
