@@ -123,22 +123,29 @@ jobs:
 
           mkdir -p ~/.ssh
 
-          # Decode base64 SSH key and write to file
+          # Debug: Check secret length (first 50 chars only, for security)
+          echo "Debug: SSH_PRIVATE_KEY length: $(echo "${{ secrets.SSH_PRIVATE_KEY }}" | wc -c)"
+          echo "Debug: First 50 chars: $(echo "${{ secrets.SSH_PRIVATE_KEY }}" | cut -c1-50)"
+
+          # Try decoding base64 SSH key (remove any whitespace first)
           echo "Decoding SSH key from base64..."
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '[:space:]' | base64 -d > ~/.ssh/id_rsa 2>&1 || {
+            echo "ERROR: Base64 decode failed!"
+            echo "Trying without base64 (maybe it's already plain text)..."
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          }
+
           chmod 600 ~/.ssh/id_rsa
 
           # Verify key format
           echo "Checking SSH key format..."
           if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
-            echo "ERROR: SSH key format is invalid after decoding!"
+            echo "ERROR: SSH key format is still invalid!"
             echo ""
-            echo "The SSH_PRIVATE_KEY secret should contain the base64-encoded key."
+            echo "Key file first line:"
+            head -1 ~/.ssh/id_rsa
             echo ""
-            echo "To generate the correct value:"
-            echo "  base64 -w 0 codedetect-key"
-            echo ""
-            echo "Then copy the output and update the SSH_PRIVATE_KEY secret."
+            echo "Please update SSH_PRIVATE_KEY secret with the base64 encoded value."
             exit 1
           fi
 
