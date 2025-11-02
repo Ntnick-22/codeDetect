@@ -274,28 +274,38 @@ function createCharts(data) {
 
     // Severity Bar Chart
     const severityCtx = document.getElementById('severityChart').getContext('2d');
-    
+
     let highCount = 0, mediumCount = 0, lowCount = 0;
-    if (data.analysis.security_issues) {
+    if (data.analysis.security_issues && data.analysis.security_issues.length > 0) {
         data.analysis.security_issues.forEach(issue => {
             const severity = issue.issue_severity;
             if (severity === 'HIGH') highCount++;
             else if (severity === 'MEDIUM') mediumCount++;
-            else lowCount++;
+            else if (severity === 'LOW') lowCount++;
         });
     }
+
+    const totalSecurityIssues = highCount + mediumCount + lowCount;
+    const chartTitle = totalSecurityIssues > 0
+        ? `Security Issue Severity (${totalSecurityIssues} total)`
+        : 'Security Issue Severity (No issues found)';
 
     window.severityChart = new Chart(severityCtx, {
         type: 'bar',
         data: {
             labels: ['High', 'Medium', 'Low'],
             datasets: [{
-                label: 'Security Issue Severity',
+                label: 'Count',
                 data: [highCount, mediumCount, lowCount],
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)'
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(6, 182, 212, 0.8)'
+                ],
+                borderColor: [
+                    'rgb(239, 68, 68)',
+                    'rgb(245, 158, 11)',
+                    'rgb(6, 182, 212)'
                 ],
                 borderWidth: 2
             }]
@@ -309,15 +319,21 @@ function createCharts(data) {
                 },
                 title: {
                     display: true,
-                    text: 'Security Issue Severity'
+                    text: chartTitle,
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        stepSize: 1
-                    }
+                        stepSize: 1,
+                        precision: 0
+                    },
+                    suggestedMax: totalSecurityIssues > 0 ? undefined : 5
                 }
             }
         }
