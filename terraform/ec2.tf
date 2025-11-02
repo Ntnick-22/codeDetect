@@ -50,34 +50,62 @@ locals {
     #!/bin/bash
     # CodeDetect EC2 Setup Script
     # This runs once when instance first boots
-    
+
     # Update system packages
     yum update -y
-    
+
     # Install Docker
     yum install -y docker
-    
+
     # Start Docker service
     systemctl start docker
     systemctl enable docker
-    
+
     # Add ec2-user to docker group (so we can run docker without sudo)
     usermod -a -G docker ec2-user
-    
+
     # Install Docker Compose
     curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-    
+
     # Install Git (to clone your repo)
     yum install -y git
-    
+
+    # Install Nginx (reverse proxy for port 80 -> 5000)
+    amazon-linux-extras install -y nginx1
+
+    # Configure Nginx
+    cat > /etc/nginx/conf.d/codedetect.conf <<'NGINX_EOF'
+server {
+    listen 80;
+    server_name codedetect.nt-nick.link;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+NGINX_EOF
+
+    # Start and enable Nginx
+    systemctl start nginx
+    systemctl enable nginx
+
     # Create app directory
     mkdir -p /home/ec2-user/app
     chown ec2-user:ec2-user /home/ec2-user/app
-    
+
     # Log completion
     echo "CodeDetect setup complete!" > /home/ec2-user/setup-complete.txt
-    
+
     # Optional: Auto-clone your repo and start app
     # cd /home/ec2-user/app
     # git clone https://github.com/yourusername/codedetect.git .
