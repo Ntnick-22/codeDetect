@@ -61,3 +61,13 @@ temp/
 GITHUB_SECRETS_VALUES.txt
 ssh_key_base64.txt
 codedetect-key*
+*.pem
+*.key
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.*
+terraform/*.tfvars
+terraform/crash.log
