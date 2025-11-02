@@ -84,40 +84,65 @@ jobs:
           retention-days: 30
 
   # =================================================================
-  # JOB 2: DEPLOY TO EC2
+  # JOB 2: DEPLOY TO EC2 VIA SSH
   # =================================================================
   deploy:
-    name: Deploy to EC2
+    name: Deploy to EC2 via SSH
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Deployment Webhook
+      - name: Setup SSH
         run: |
-          echo "=== Triggering deployment via webhook ==="
-          response=$(curl -s -w "\n%{http_code}" \
-            -X POST \
-            -H "X-Deploy-Token: ${{ secrets.WEBHOOK_SECRET }}" \
-            http://${{ secrets.EC2_HOST }}:8000/deploy)
+          echo "=== Setting up SSH connection ==="
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          echo "SSH setup complete"
 
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
+      - name: Deploy to EC2
+        run: |
+          echo "=== Deploying to EC2 instance ==="
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            set -e
 
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Deployment triggered successfully!"
-            echo "$body"
-          else
-            echo "❌ Deployment failed with code: $http_code"
-            echo "$body"
-            exit 1
-          fi
+            echo "Connected to EC2 instance"
+            cd ${{ env.APP_DIR }}
+
+            echo ""
+            echo "=== Pulling latest code ==="
+            git pull origin main
+
+            echo ""
+            echo "=== Stopping containers ==="
+            docker-compose down
+
+            echo ""
+            echo "=== Building and starting containers ==="
+            docker-compose up -d --build
+
+            echo ""
+            echo "=== Waiting for application to start ==="
+            sleep 15
+
+            echo ""
+            echo "=== Container status ==="
+            docker-compose ps
+
+            echo ""
+            echo "=== Recent logs ==="
+            docker-compose logs --tail=20
+
+            echo ""
+            echo "=== Deployment complete! ==="
+          ENDSSH
 
       - name: Health Check
         run: |
-          echo "=== Waiting for deployment to complete ==="
-          sleep 20
+          echo "=== Running health check ==="
+          sleep 5
 
-          echo "=== Running Health Check ==="
           response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:5000/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
@@ -126,4 +151,5 @@ jobs:
           else
             echo "⚠️ Health check response: $response"
             echo "App might still be starting..."
+            exit 1
           fi
