@@ -95,10 +95,23 @@ jobs:
       - name: Setup SSH
         run: |
           echo "=== Setting up SSH connection ==="
+
+          # Clean secrets (remove whitespace, quotes, newlines)
+          EC2_HOST=$(echo "${{ secrets.EC2_HOST }}" | tr -d '[:space:]' | tr -d '"' | tr -d "'")
+          EC2_USER=$(echo "${{ secrets.EC2_USER }}" | tr -d '[:space:]' | tr -d '"' | tr -d "'")
+
+          # Debug: Show what we're connecting to (hide middle of IP for security)
+          echo "Connecting to: ${EC2_HOST:0:3}...${EC2_HOST: -3}"
+          echo "User: $EC2_USER"
+
+          # Save cleaned values to environment
+          echo "EC2_HOST=$EC2_HOST" >> $GITHUB_ENV
+          echo "EC2_USER=$EC2_USER" >> $GITHUB_ENV
+
+          # Setup SSH key
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # Skip host key checking for CI/CD (safe for known server)
           echo "StrictHostKeyChecking no" > ~/.ssh/config
           chmod 600 ~/.ssh/config
           echo "SSH setup complete"
@@ -106,7 +119,7 @@ jobs:
       - name: Deploy to EC2
         run: |
           echo "=== Deploying to EC2 instance ==="
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
             set -e
 
             echo "Connected to EC2 instance"
@@ -145,11 +158,11 @@ jobs:
           echo "=== Running health check ==="
           sleep 5
 
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:5000/api/health || echo "000")
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ env.EC2_HOST }}:5000/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
             echo "✅ Deployment successful!"
-            echo "🌐 App URL: http://${{ secrets.EC2_HOST }}:5000"
+            echo "🌐 App URL: http://${{ env.EC2_HOST }}:5000"
           else
             echo "⚠️ Health check response: $response"
             echo "App might still be starting..."
