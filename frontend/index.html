@@ -12,18 +12,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <body>
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-        🌙
-    </button>
-
-    
-   
     <div class="main-container">
         <!-- Header -->
         <div class="text-center text-white mb-4">
-            <h1 class="display-4 fw-bold">🔍 CodeDetect</h1>
+            <h1 class="display-4 fw-bold">CodeDetect</h1>
             <p class="lead">Automated Python Code Quality Analysis</p>
         </div>
 
@@ -32,7 +24,7 @@
             <div class="card-body">
                 <h5 class="card-title">Upload Your Python File</h5>
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                    <h3>📁 Drop your .py file here</h3>
+                    <h3>Drop your Python file here</h3>
                     <p>or click to browse</p>
                     <input type="file" id="fileInput" accept=".py" style="display: none;">
                 </div>
@@ -47,7 +39,7 @@
         <!-- History Card -->
         <div class="card" id="historyCard" style="display: none;">
             <div class="card-body">
-                <h5 class="card-title">📜 Recent Analysis History</h5>
+                <h5 class="card-title">Recent Analysis History</h5>
                 <div id="historyList" class="mt-3">
                     <p class="text-muted">No analysis history yet</p>
                 </div>
@@ -73,7 +65,7 @@
         <div id="scoreCircle" class="score-circle my-3">--</div>
         <p id="scoreText" class="text-muted">Upload a file to see results</p>
         <button id="downloadBtn" class="btn btn-success mt-3" style="display: none;">
-            📥 Download Report
+            Download Report
         </button>
     </div>
 </div>

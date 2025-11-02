@@ -1,22 +1,3 @@
-// Theme Toggle Functionality
-const themeToggle = document.getElementById('themeToggle');
-const htmlElement = document.documentElement;
-
-// Check for saved theme preference or default to 'light'
-const currentTheme = localStorage.getItem('theme') || 'light';
-htmlElement.setAttribute('data-theme', currentTheme);
-themeToggle.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
-
-// Toggle theme function
-themeToggle.addEventListener('click', () => {
-    const currentTheme = htmlElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
-    htmlElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-});
-
 // Issue fix suggestions
 const fixSuggestions = {
     'missing-docstring': 'Add a docstring at the beginning of your function/class. Example: """This function does X"""',
@@ -185,7 +166,7 @@ function displayIssues(analysis) {
 
     // Security issues
     if (analysis.security_issues && analysis.security_issues.length > 0) {
-        issuesList.innerHTML += '<h6 class="text-danger mt-3">🔒 Security Issues:</h6>';
+        issuesList.innerHTML += '<h6 class="text-danger mt-3">Security Issues:</h6>';
         analysis.security_issues.forEach((issue, index) => {
             const issueId = `security-${index}`;
             issuesList.innerHTML += `
@@ -210,7 +191,7 @@ function displayIssues(analysis) {
 
     // Quality issues
     if (analysis.quality_issues && analysis.quality_issues.length > 0) {
-        issuesList.innerHTML += '<h6 class="text-primary mt-3">📝 Code Quality Issues:</h6>';
+        issuesList.innerHTML += '<h6 class="text-primary mt-3">Code Quality Issues:</h6>';
         
         const displayIssues = analysis.quality_issues.slice(0, 10);
         
@@ -242,7 +223,7 @@ function displayIssues(analysis) {
     }
 
     if (issuesList.innerHTML === '') {
-        issuesList.innerHTML = '<p class="text-success">✅ No major issues found! Great job!</p>';
+        issuesList.innerHTML = '<p class="text-success">No major issues found! Great job!</p>';
     }
 }
 
