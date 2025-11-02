@@ -49,32 +49,28 @@ locals {
   user_data = <<-EOF
     #!/bin/bash
     # CodeDetect EC2 Setup Script
-    # This runs once when instance first boots
+    set -e
 
-    # Update system packages
+    echo "=== Updating system ==="
     yum update -y
+    yum install -y yum-utils git
 
-    # Install Docker
-    yum install -y docker
+    echo "=== Installing Docker (latest) ==="
+    yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine || true
+    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-    # Start Docker service
-    systemctl start docker
+    echo "=== Starting Docker ==="
     systemctl enable docker
+    systemctl start docker
+    usermod -aG docker ec2-user
 
-    # Add ec2-user to docker group (so we can run docker without sudo)
-    usermod -a -G docker ec2-user
-
-    # Install Docker Compose
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-
-    # Install Git (to clone your repo)
-    yum install -y git
-
-    # Install Nginx (reverse proxy for port 80 -> 5000)
+    echo "=== Installing Nginx ==="
     amazon-linux-extras install -y nginx1
+    systemctl enable nginx
+    systemctl start nginx
 
-    # Configure Nginx
+    echo "=== Configuring Nginx proxy ==="
     cat > /etc/nginx/conf.d/codedetect.conf <<'NGINX_EOF'
 server {
     listen 80;
@@ -95,23 +91,21 @@ server {
 }
 NGINX_EOF
 
-    # Start and enable Nginx
-    systemctl start nginx
-    systemctl enable nginx
+    systemctl restart nginx
 
-    # Create app directory
+    echo "=== Preparing app directory ==="
     mkdir -p /home/ec2-user/app
     chown ec2-user:ec2-user /home/ec2-user/app
 
-    # Log completion
-    echo "CodeDetect setup complete!" > /home/ec2-user/setup-complete.txt
+    # Optional auto-deploy (enable this if desired)
+    # su - ec2-user -c "cd /home/ec2-user && git clone https://github.com/Ntnick-22/codeDetect.git app"
+    # su - ec2-user -c "cd /home/ec2-user/app && docker compose build && docker compose up -d"
 
-    # Optional: Auto-clone your repo and start app
-    # cd /home/ec2-user/app
-    # git clone https://github.com/yourusername/codedetect.git .
-    # docker-compose up -d
+    echo "=== Setup complete ==="
+    echo "CodeDetect setup complete at $(date)" > /home/ec2-user/setup-complete.txt
   EOF
 }
+
 
 # ----------------------------------------------------------------------------
 # EC2 INSTANCE
