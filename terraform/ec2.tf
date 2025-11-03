@@ -115,10 +115,22 @@ NGINX_EOF
     # Log completion
     echo "CodeDetect setup complete!" > /home/ec2-user/setup-complete.txt
 
-    # Optional: Auto-clone your repo and start app
-    # cd /home/ec2-user/app
-    # git clone https://github.com/yourusername/codedetect.git .
-    # docker-compose up -d
+    # Auto-deploy application
+    echo "=== Starting automatic deployment ===" >> /var/log/codedetect-deploy.log
+    cd /home/ec2-user/app
+
+    # Clone repository as ec2-user
+    su - ec2-user -c "cd /home/ec2-user/app && git clone https://github.com/Ntnick-22/codeDetect.git . 2>&1" >> /var/log/codedetect-deploy.log
+
+    # Wait for Docker to be fully ready
+    sleep 10
+
+    # Build and start application as ec2-user
+    su - ec2-user -c "cd /home/ec2-user/app && docker build -t codedetect-app:latest . 2>&1" >> /var/log/codedetect-deploy.log
+    su - ec2-user -c "cd /home/ec2-user/app && docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
+
+    echo "=== Deployment complete at $(date) ===" >> /var/log/codedetect-deploy.log
+    echo "Application auto-deployed!" > /home/ec2-user/deployment-complete.txt
   EOF
 }
 
