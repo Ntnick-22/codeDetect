@@ -29,6 +29,15 @@ resource "aws_eip" "main" {
     }
   )
 
+  # Lifecycle policy: Prevent accidental deletion of Elastic IP
+  # This keeps the same IP address across rebuilds
+  # GitHub secrets will work permanently without manual updates
+  # Cost: $0.00 (free when attached to EC2)
+  # To destroy: Remove this block, apply, then destroy
+  lifecycle {
+    prevent_destroy = true
+  }
+
   # Depends on Internet Gateway existing first
   depends_on = [aws_internet_gateway.main]
 }
@@ -49,28 +58,32 @@ locals {
   user_data = <<-EOF
     #!/bin/bash
     # CodeDetect EC2 Setup Script
-    set -e
+    # This runs once when instance first boots
 
-    echo "=== Updating system ==="
+    # Update system packages
     yum update -y
-    yum install -y yum-utils git
 
-    echo "=== Installing Docker (latest) ==="
-    yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine || true
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    # Install Docker
+    yum install -y docker
 
-    echo "=== Starting Docker ==="
-    systemctl enable docker
+    # Start Docker service
     systemctl start docker
-    usermod -aG docker ec2-user
+    systemctl enable docker
 
-    echo "=== Installing Nginx ==="
+    # Add ec2-user to docker group (so we can run docker without sudo)
+    usermod -a -G docker ec2-user
+
+    # Install Docker Compose
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+
+    # Install Git (to clone your repo)
+    yum install -y git
+
+    # Install Nginx (reverse proxy for port 80 -> 5000)
     amazon-linux-extras install -y nginx1
-    systemctl enable nginx
-    systemctl start nginx
 
-    echo "=== Configuring Nginx proxy ==="
+    # Configure Nginx
     cat > /etc/nginx/conf.d/codedetect.conf <<'NGINX_EOF'
 server {
     listen 80;
@@ -91,21 +104,23 @@ server {
 }
 NGINX_EOF
 
-    systemctl restart nginx
+    # Start and enable Nginx
+    systemctl start nginx
+    systemctl enable nginx
 
-    echo "=== Preparing app directory ==="
+    # Create app directory
     mkdir -p /home/ec2-user/app
     chown ec2-user:ec2-user /home/ec2-user/app
 
-    # Optional auto-deploy (enable this if desired)
-    # su - ec2-user -c "cd /home/ec2-user && git clone https://github.com/Ntnick-22/codeDetect.git app"
-    # su - ec2-user -c "cd /home/ec2-user/app && docker compose build && docker compose up -d"
+    # Log completion
+    echo "CodeDetect setup complete!" > /home/ec2-user/setup-complete.txt
 
-    echo "=== Setup complete ==="
-    echo "CodeDetect setup complete at $(date)" > /home/ec2-user/setup-complete.txt
+    # Optional: Auto-clone your repo and start app
+    # cd /home/ec2-user/app
+    # git clone https://github.com/yourusername/codedetect.git .
+    # docker-compose up -d
   EOF
 }
-
 
 # ----------------------------------------------------------------------------
 # EC2 INSTANCE

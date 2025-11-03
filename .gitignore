@@ -63,6 +63,7 @@ ssh_key_base64.txt
 codedetect-key*
 *.pem
 *.key
+temp_key.pem
 
 # Terraform
 terraform/.terraform/
@@ -71,3 +72,6 @@ terraform/terraform.tfstate
 terraform/terraform.tfstate.*
 terraform/*.tfvars
 terraform/crash.log
+terraform/*key*
+terraform/*.pem
+terraform/SECRETS_UPDATE.md
