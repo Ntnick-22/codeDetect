@@ -1,8 +1,7 @@
-version: '3.8'
-
 services:
   # Main application
   codedetect:
+    image: codedetect-app:latest
     build:
       context: .
       dockerfile: Dockerfile
