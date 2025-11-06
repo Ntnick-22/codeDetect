@@ -19,6 +19,24 @@ app = Flask(
 CORS(app)
 
 # ============================================================
+# Security Configuration
+# ============================================================
+# SECRET_KEY is critical for:
+# - Session encryption (cookies)
+# - CSRF protection
+# - Flash messages
+# - Any cryptographic operations
+#
+# In production: Fetched from AWS Parameter Store via entrypoint.sh
+# In development: Set in environment or use a default (insecure)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-CHANGE-IN-PRODUCTION')
+
+# Warn if using default secret key
+if app.config['SECRET_KEY'] == 'dev-secret-key-CHANGE-IN-PRODUCTION':
+    print("⚠️  WARNING: Using default SECRET_KEY - Not secure for production!")
+    print("   Set SECRET_KEY environment variable or configure AWS Parameter Store")
+
+# ============================================================
 # Database Configuration (works both locally and on AWS)
 # ============================================================
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(

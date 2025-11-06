@@ -1,6 +1,6 @@
 resource "aws_key_pair" "main" {
   key_name   = var.key_pair_name
-  public_key = file("${path.module}/codedetect-key.pub")  # Your public key file
+  public_key = file("${path.module}/codedetect-key.pub") # Your public key file
 
   tags = merge(
     local.common_tags,
@@ -20,7 +20,7 @@ resource "aws_key_pair" "main" {
 # Important for DNS (your domain always points to same IP)
 
 resource "aws_eip" "main" {
-  domain = "vpc"  # Allocate in VPC
+  domain = "vpc" # Allocate in VPC
 
   tags = merge(
     local.common_tags,
@@ -141,47 +141,47 @@ NGINX_EOF
 
 resource "aws_instance" "main" {
   # AMI (machine image) - using Amazon Linux 2
-  ami           = data.aws_ami.amazon_linux_2.id
-  
+  ami = data.aws_ami.amazon_linux_2.id
+
   # Instance type (size)
-  instance_type = var.instance_type  # t3.micro from variables
-  
+  instance_type = var.instance_type # t3.micro from variables
+
   # SSH key for access
-  key_name      = aws_key_pair.main.key_name
-  
+  key_name = aws_key_pair.main.key_name
+
   # Which subnet to launch in (public subnet 1)
-  subnet_id     = aws_subnet.public_1.id
-  
+  subnet_id = aws_subnet.public_1.id
+
   # Security group (firewall rules)
   vpc_security_group_ids = [aws_security_group.ec2.id]
-  
+
   # User data script (runs on first boot)
   user_data = local.user_data
-  
+
   # Root volume (main hard drive)
   root_block_device {
-    volume_type = "gp3"     # General Purpose SSD v3 (faster, cheaper)
-    volume_size = 20        # 20 GB (enough for Docker + app)
-    encrypted   = true      # Encrypt the drive for security
-    
+    volume_type = "gp3" # General Purpose SSD v3 (faster, cheaper)
+    volume_size = 20    # 20 GB (enough for Docker + app)
+    encrypted   = true  # Encrypt the drive for security
+
     tags = {
       Name = "${local.name_prefix}-root-volume"
     }
   }
-  
+
   # Enable detailed monitoring (optional, costs extra)
   monitoring = var.enable_monitoring
-  
+
   # IAM role for accessing S3 (we'll create this next)
   iam_instance_profile = aws_iam_instance_profile.ec2.name
-  
+
   tags = merge(
     local.common_tags,
     {
       Name = "${local.name_prefix}-ec2"
     }
   )
-  
+
   # Ensure VPC and security group exist first
   depends_on = [
     aws_security_group.ec2,
@@ -236,6 +236,60 @@ resource "aws_iam_role_policy" "ec2_s3_access" {
           aws_s3_bucket.uploads.arn,
           "${aws_s3_bucket.uploads.arn}/*"
         ]
+      }
+    ]
+  })
+}
+
+# ----------------------------------------------------------------------------
+# IAM POLICY - SSM Parameter Store Access
+# ----------------------------------------------------------------------------
+
+# WHAT: IAM policy allowing EC2 to read parameters from Parameter Store
+# WHY: So application can fetch secrets (API keys, passwords, config)
+# without hardcoding them in code
+
+# SECURITY NOTE:
+# - Only allows GetParameter (read-only)
+# - Only for our specific project parameters
+# - Cannot create, update, or delete parameters
+# - Cannot access other applications' parameters
+
+resource "aws_iam_role_policy" "ec2_ssm_access" {
+  name = "${local.name_prefix}-ec2-ssm-policy"
+  role = aws_iam_role.ec2.id
+
+  # Policy: Allow reading parameters from SSM Parameter Store
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",        # Read a single parameter
+          "ssm:GetParameters",       # Read multiple parameters at once
+          "ssm:GetParametersByPath"  # Read all parameters under a path
+        ]
+        # Restrict to only our project's parameters
+        # Format: /codedetect/prod/*
+        Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.app_name}/${var.environment}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:DescribeParameters" # List parameters (doesn't expose values)
+        ]
+        Resource = "*" # This action doesn't support resource-level permissions
+      },
+      {
+        # Allow decryption of SecureString parameters
+        # SecureString parameters are encrypted with KMS
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt" # Decrypt SecureString values
+        ]
+        # Default AWS managed key for SSM
+        Resource = "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/alias/aws/ssm"
       }
     ]
   })
