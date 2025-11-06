@@ -28,7 +28,7 @@ get_parameter() {
     local param_name=$1
     local region=${AWS_REGION:-eu-west-1}
 
-    echo "🔑 Fetching parameter: $param_name"
+    echo "🔑 Fetching parameter: $param_name" >&2
 
     # Use AWS CLI to fetch parameter
     # --with-decryption: Decrypt SecureString parameters
@@ -42,11 +42,11 @@ get_parameter() {
         --output text 2>/dev/null)
 
     if [ $? -eq 0 ] && [ -n "$value" ]; then
-        echo "   ✅ Successfully fetched $param_name"
-        echo "$value"
+        echo "   ✅ Successfully fetched $param_name" >&2
+        echo "$value"  # Output ONLY the value to stdout
     else
-        echo "   ⚠️  Failed to fetch $param_name - using default/env value"
-        echo ""
+        echo "   ⚠️  Failed to fetch $param_name - using default/env value" >&2
+        echo ""  # Return empty string
     fi
 }
 
