@@ -322,12 +322,15 @@ def health_check():
 def app_info():
     """Application information endpoint - shows deployment details"""
     return jsonify({
-        'version': '2.0.0-secrets',
+        'version': '2.1.0-ha',
         'deployment_date': '2025-11-06',
         'features': [
             'AWS Parameter Store integration',
             'CloudWatch monitoring',
-            'Production-ready configuration',
+            'High Availability with Load Balancer',
+            'Auto Scaling (2-4 instances)',
+            'Automatic failover and self-healing',
+            'Zero-downtime deployment',
             'Secure secrets management'
         ],
         'security': {
