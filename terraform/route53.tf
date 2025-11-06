@@ -11,26 +11,30 @@
 # Don't create a new one - just get the existing one
 
 data "aws_route53_zone" "main" {
-  name         = var.domain_name  # "nt-nick.link"
-  private_zone = false            # Public hosted zone (accessible from internet)
+  name         = var.domain_name # "nt-nick.link"
+  private_zone = false           # Public hosted zone (accessible from internet)
 }
 
 # ----------------------------------------------------------------------------
-# CREATE DNS RECORD
+# CREATE DNS RECORD - Points to Load Balancer
 # ----------------------------------------------------------------------------
-# Points your subdomain (codedetect.nt-nick.link) to your EC2's IP
+# Points your subdomain (codedetect.nt-nick.link) to Application Load Balancer
+# Using ALIAS record (AWS-specific) instead of regular A record
+# Benefits: Free, better health checks, automatic IP updates
 
 resource "aws_route53_record" "app" {
-  zone_id = data.aws_route53_zone.main.zone_id  # Your hosted zone
+  zone_id = data.aws_route53_zone.main.zone_id
   name    = var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
-  type    = "A"  # A record = maps domain to IPv4 address
-  ttl     = 300  # Time To Live = 5 minutes (how long DNS is cached)
+  type    = "A"
 
-  # Point to your EC2's Elastic IP
-  records = [aws_eip.main.public_ip]
+  # Alias record pointing to Load Balancer
+  alias {
+    name                   = aws_lb.main.dns_name
+    zone_id                = aws_lb.main.zone_id
+    evaluate_target_health = true # Route53 checks ALB health
+  }
 
-  # Wait for EIP to be created first
-  depends_on = [aws_eip.main]
+  depends_on = [aws_lb.main]
 }
 
 # ============================================================================

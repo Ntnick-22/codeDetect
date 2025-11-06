@@ -43,10 +43,11 @@ resource "aws_eip" "main" {
 }
 
 # Associate Elastic IP with EC2 instance
-resource "aws_eip_association" "main" {
-  instance_id   = aws_instance.main.id
-  allocation_id = aws_eip.main.id
-}
+# COMMENTED OUT: Now using Auto Scaling Group with Load Balancer instead
+# resource "aws_eip_association" "main" {
+#   instance_id   = aws_instance.main.id
+#   allocation_id = aws_eip.main.id
+# }
 
 # ----------------------------------------------------------------------------
 # EC2 USER DATA SCRIPT
@@ -135,59 +136,61 @@ NGINX_EOF
 }
 
 # ----------------------------------------------------------------------------
-# EC2 INSTANCE
+# EC2 INSTANCE - REPLACED BY AUTO SCALING GROUP
 # ----------------------------------------------------------------------------
-# The main server that runs your application
+# COMMENTED OUT: Now using Auto Scaling Group with Launch Template instead
+# This provides high availability with automatic failover
+# See loadbalancer.tf for the new setup
 
-resource "aws_instance" "main" {
-  # AMI (machine image) - using Amazon Linux 2
-  ami = data.aws_ami.amazon_linux_2.id
-
-  # Instance type (size)
-  instance_type = var.instance_type # t3.micro from variables
-
-  # SSH key for access
-  key_name = aws_key_pair.main.key_name
-
-  # Which subnet to launch in (public subnet 1)
-  subnet_id = aws_subnet.public_1.id
-
-  # Security group (firewall rules)
-  vpc_security_group_ids = [aws_security_group.ec2.id]
-
-  # User data script (runs on first boot)
-  user_data = local.user_data
-
-  # Root volume (main hard drive)
-  root_block_device {
-    volume_type = "gp3" # General Purpose SSD v3 (faster, cheaper)
-    volume_size = 20    # 20 GB (enough for Docker + app)
-    encrypted   = true  # Encrypt the drive for security
-
-    tags = {
-      Name = "${local.name_prefix}-root-volume"
-    }
-  }
-
-  # Enable detailed monitoring (optional, costs extra)
-  monitoring = var.enable_monitoring
-
-  # IAM role for accessing S3 (we'll create this next)
-  iam_instance_profile = aws_iam_instance_profile.ec2.name
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${local.name_prefix}-ec2"
-    }
-  )
-
-  # Ensure VPC and security group exist first
-  depends_on = [
-    aws_security_group.ec2,
-    aws_internet_gateway.main
-  ]
-}
+# resource "aws_instance" "main" {
+#   # AMI (machine image) - using Amazon Linux 2
+#   ami = data.aws_ami.amazon_linux_2.id
+#
+#   # Instance type (size)
+#   instance_type = var.instance_type # t3.micro from variables
+#
+#   # SSH key for access
+#   key_name = aws_key_pair.main.key_name
+#
+#   # Which subnet to launch in (public subnet 1)
+#   subnet_id = aws_subnet.public_1.id
+#
+#   # Security group (firewall rules)
+#   vpc_security_group_ids = [aws_security_group.ec2.id]
+#
+#   # User data script (runs on first boot)
+#   user_data = local.user_data
+#
+#   # Root volume (main hard drive)
+#   root_block_device {
+#     volume_type = "gp3" # General Purpose SSD v3 (faster, cheaper)
+#     volume_size = 20    # 20 GB (enough for Docker + app)
+#     encrypted   = true  # Encrypt the drive for security
+#
+#     tags = {
+#       Name = "${local.name_prefix}-root-volume"
+#     }
+#   }
+#
+#   # Enable detailed monitoring (optional, costs extra)
+#   monitoring = var.enable_monitoring
+#
+#   # IAM role for accessing S3 (we'll create this next)
+#   iam_instance_profile = aws_iam_instance_profile.ec2.name
+#
+#   tags = merge(
+#     local.common_tags,
+#     {
+#       Name = "${local.name_prefix}-ec2"
+#     }
+#   )
+#
+#   # Ensure VPC and security group exist first
+#   depends_on = [
+#     aws_security_group.ec2,
+#     aws_internet_gateway.main
+#   ]
+# }
 
 # ----------------------------------------------------------------------------
 # IAM ROLE FOR EC2

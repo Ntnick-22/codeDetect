@@ -94,9 +94,10 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   evaluation_periods = 5  # Must exceed for 5 checks
   # Formula: Must be high for (period x evaluation_periods) = 5 minutes
 
-  # What to monitor (which EC2 instance)
+  # What to monitor (Auto Scaling Group instead of single instance)
+  # UPDATED: Now monitors Auto Scaling Group
   dimensions = {
-    InstanceId = aws_instance.main.id
+    AutoScalingGroupName = aws_autoscaling_group.app.name
   }
 
   # What to do when alarm triggers
@@ -152,8 +153,9 @@ resource "aws_cloudwatch_metric_alarm" "instance_status_check" {
   period             = 60 # 1 minute
   evaluation_periods = 2  # 2 failures = 2 minutes down
 
+  # UPDATED: Now monitors Auto Scaling Group
   dimensions = {
-    InstanceId = aws_instance.main.id
+    AutoScalingGroupName = aws_autoscaling_group.app.name
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
@@ -201,8 +203,9 @@ resource "aws_cloudwatch_metric_alarm" "high_network_out" {
   period             = 300 # 5 minutes
   evaluation_periods = 1   # Trigger immediately
 
+  # UPDATED: Now monitors Auto Scaling Group
   dimensions = {
-    InstanceId = aws_instance.main.id
+    AutoScalingGroupName = aws_autoscaling_group.app.name
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
@@ -262,6 +265,9 @@ resource "aws_cloudwatch_metric_alarm" "high_network_out" {
 # - Great for troubleshooting incidents
 # - Impressive for interviews/demos
 
+# COMMENTED OUT: Needs update for Auto Scaling Group and ALB metrics
+# Will recreate with ASG-specific dashboard later
+/*
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${local.name_prefix}-monitoring"
 
@@ -490,6 +496,7 @@ resource "aws_cloudwatch_dashboard" "main" {
   # Note: CloudWatch Dashboards don't support tags
   # Tags can only be applied to alarms, topics, and other resources
 }
+*/
 
 # ============================================================================
 # DASHBOARD EXPLANATION FOR INTERVIEWS

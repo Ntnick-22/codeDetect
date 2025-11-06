@@ -6,23 +6,24 @@
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# EC2 INSTANCE INFORMATION
+# EC2 INSTANCE INFORMATION - Now using Auto Scaling Group
 # ----------------------------------------------------------------------------
 
-output "ec2_instance_id" {
-  description = "ID of the EC2 instance"
-  value       = aws_instance.main.id
-}
+# COMMENTED OUT: Now using Auto Scaling Group instead of single instance
+# output "ec2_instance_id" {
+#   description = "ID of the EC2 instance"
+#   value       = aws_instance.main.id
+# }
 
 output "ec2_public_ip" {
-  description = "Public IP address of EC2 instance (Elastic IP)"
+  description = "Public IP address (Elastic IP) - reserved but not attached"
   value       = aws_eip.main.public_ip
 }
 
-output "ec2_instance_type" {
-  description = "Type of EC2 instance"
-  value       = aws_instance.main.instance_type
-}
+# output "ec2_instance_type" {
+#   description = "Type of EC2 instance"
+#   value       = aws_instance.main.instance_type
+# }
 
 # ----------------------------------------------------------------------------
 # NETWORK INFORMATION
@@ -101,7 +102,7 @@ output "ssh_key_name" {
 
 output "deployment_commands" {
   description = "Commands to deploy your application"
-  value = <<-EOT
+  value       = <<-EOT
     # 1. SSH into EC2
     ssh -i codedetect-key ec2-user@${aws_eip.main.public_ip}
     
@@ -131,12 +132,12 @@ output "deployment_commands" {
 output "infrastructure_summary" {
   description = "Summary of created infrastructure"
   value = {
-    region              = var.aws_region
-    environment         = var.environment
-    ec2_instance_type   = var.instance_type
-    s3_bucket          = aws_s3_bucket.uploads.id
-    domain_url         = var.subdomain != "" ? "http://${var.subdomain}.${var.domain_name}" : "http://${var.domain_name}"
-    estimated_cost     = "~$2-10/month (depending on free tier eligibility)"
+    region            = var.aws_region
+    environment       = var.environment
+    ec2_instance_type = var.instance_type
+    s3_bucket         = aws_s3_bucket.uploads.id
+    domain_url        = var.subdomain != "" ? "http://${var.subdomain}.${var.domain_name}" : "http://${var.domain_name}"
+    estimated_cost    = "~$2-10/month (depending on free tier eligibility)"
   }
 }
 
@@ -182,12 +183,86 @@ output "infrastructure_summary" {
 # ============================================================================
 
 # ----------------------------------------------------------------------------
+# MONITORING & ALERTING INFORMATION
+# ----------------------------------------------------------------------------
+
+output "sns_topic_arn" {
+  description = "ARN of SNS topic for monitoring alerts"
+  value       = aws_sns_topic.alerts.arn
+}
+
+output "notification_email" {
+  description = "Email address receiving alerts"
+  value       = var.notification_email
+}
+
+output "cloudwatch_alarms" {
+  description = "List of CloudWatch alarms created"
+  value = {
+    high_cpu_alarm      = aws_cloudwatch_metric_alarm.high_cpu.alarm_name
+    instance_down_alarm = aws_cloudwatch_metric_alarm.instance_status_check.alarm_name
+    high_network_alarm  = aws_cloudwatch_metric_alarm.high_network_out.alarm_name
+  }
+}
+
+output "cloudwatch_alarms_url" {
+  description = "Direct link to CloudWatch Alarms in AWS Console"
+  value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#alarmsV2:"
+}
+
+# COMMENTED OUT: Dashboard disabled temporarily for ASG migration
+# output "cloudwatch_dashboard_url" {
+#   description = "Direct link to CloudWatch Dashboard"
+#   value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.main.dashboard_name}"
+# }
+
+# output "cloudwatch_dashboard_name" {
+#   description = "Name of the CloudWatch dashboard"
+#   value       = aws_cloudwatch_dashboard.main.dashboard_name
+# }
+
+output "monitoring_setup_instructions" {
+  description = "Instructions to complete monitoring setup"
+  value       = <<-EOT
+    ⚠️  IMPORTANT: Complete SNS Email Subscription
+
+    After running 'terraform apply':
+
+    1. CHECK YOUR EMAIL: ${var.notification_email}
+       Subject: "AWS Notification - Subscription Confirmation"
+       (Check spam folder if not in inbox)
+
+    2. CLICK "Confirm subscription" link in email
+       Until you confirm, you won't receive any alerts!
+
+    3. VERIFY SUBSCRIPTION:
+       aws sns list-subscriptions-by-topic --topic-arn ${aws_sns_topic.alerts.arn}
+       Should show "SubscriptionArn" (not "PendingConfirmation")
+
+    4. TEST AN ALARM (optional):
+       aws cloudwatch set-alarm-state \
+         --alarm-name ${aws_cloudwatch_metric_alarm.high_cpu.alarm_name} \
+         --state-value ALARM \
+         --state-reason "Testing alarm notification"
+
+       You should receive test email within 1 minute.
+
+    Monitoring Dashboard: ${aws_sns_topic.alerts.arn}
+
+    Active Alarms:
+    ✓ High CPU (>80% for 5 min)
+    ✓ Instance Down (status check fails)
+    ✓ High Network Traffic (>100MB/5min)
+  EOT
+}
+
+# ----------------------------------------------------------------------------
 # COST ESTIMATION OUTPUT
 # ----------------------------------------------------------------------------
 
 output "monthly_cost_estimate" {
   description = "Estimated monthly AWS costs"
-  value = <<-EOT
+  value       = <<-EOT
     Estimated Monthly Costs (EU-WEST-1):
     
     With Free Tier (First 12 Months):
@@ -215,7 +290,7 @@ output "monthly_cost_estimate" {
 
 output "next_steps" {
   description = "What to do after Terraform completes"
-  value = <<-EOT
+  value       = <<-EOT
     ✅ Infrastructure Created Successfully!
     
     Next Steps:
