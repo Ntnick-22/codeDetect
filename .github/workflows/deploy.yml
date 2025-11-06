@@ -84,89 +84,78 @@ jobs:
           retention-days: 30
 
   # =================================================================
-  # JOB 2: DEPLOY TO EC2 VIA SSH
+  # JOB 2: DEPLOY VIA AUTO SCALING GROUP REFRESH
   # =================================================================
   deploy:
-    name: Deploy to EC2 via SSH
+    name: Deploy via Auto Scaling Group
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup SSH
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Trigger Auto Scaling Group Instance Refresh
         run: |
-          echo "=== Setting up SSH connection ==="
+          echo "=== Starting Auto Scaling Group Instance Refresh ==="
+          echo "This will launch new instances with latest code"
 
-          # Clean secrets (remove whitespace, quotes, newlines)
-          EC2_HOST=$(echo "${{ secrets.EC2_HOST }}" | tr -d '[:space:]' | tr -d '"' | tr -d "'")
-          EC2_USER=$(echo "${{ secrets.EC2_USER }}" | tr -d '[:space:]' | tr -d '"' | tr -d "'")
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name codedetect-prod-asg \
+            --preferences '{
+              "MinHealthyPercentage": 50,
+              "InstanceWarmup": 300
+            }'
 
-          # Debug: Show what we're connecting to (hide middle of IP for security)
-          echo "Connecting to: ${EC2_HOST:0:3}...${EC2_HOST: -3}"
-          echo "User: $EC2_USER"
+          echo "✅ Instance refresh started!"
+          echo "New instances will:"
+          echo "  1. Launch with latest AMI"
+          echo "  2. Run user data script"
+          echo "  3. Clone latest code from GitHub"
+          echo "  4. Build and start Docker containers"
+          echo ""
+          echo "Old instances will be terminated after new ones are healthy"
 
-          # Save cleaned values to environment
-          echo "EC2_HOST=$EC2_HOST" >> $GITHUB_ENV
-          echo "EC2_USER=$EC2_USER" >> $GITHUB_ENV
-
-          # Setup SSH key
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          echo "StrictHostKeyChecking no" > ~/.ssh/config
-          chmod 600 ~/.ssh/config
-          echo "SSH setup complete"
-
-      - name: Deploy to EC2
+      - name: Wait for Instance Refresh
         run: |
-          echo "=== Deploying to EC2 instance ==="
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
-            set -e
+          echo "=== Monitoring instance refresh progress ==="
+          echo "This takes ~5 minutes (instances boot + health checks)"
 
-            echo "Connected to EC2 instance"
-            cd /home/ec2-user/app
+          # Wait up to 10 minutes for refresh to complete
+          for i in {1..20}; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name codedetect-prod-asg \
+              --query 'InstanceRefreshes[0].Status' \
+              --output text)
 
-            echo ""
-            echo "=== Pulling latest code ==="
-            git pull origin main
+            echo "[$i/20] Refresh status: $STATUS"
 
-            echo ""
-            echo "=== Stopping containers ==="
-            docker-compose down
+            if [ "$STATUS" = "Successful" ]; then
+              echo "✅ Instance refresh completed successfully!"
+              break
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "❌ Instance refresh $STATUS"
+              exit 1
+            fi
 
-            echo ""
-            echo "=== Building Docker image ==="
-            docker build -t codedetect-app:latest .
+            sleep 30
+          done
 
-            echo ""
-            echo "=== Starting containers ==="
-            docker-compose up -d
-
-            echo ""
-            echo "=== Waiting for application to start ==="
-            sleep 15
-
-            echo ""
-            echo "=== Container status ==="
-            docker-compose ps
-
-            echo ""
-            echo "=== Recent logs ==="
-            docker-compose logs --tail=20
-
-            echo ""
-            echo "=== Deployment complete! ==="
-          ENDSSH
-
-      - name: Health Check
+      - name: Health Check via Load Balancer
         run: |
           echo "=== Running health check ==="
-          sleep 5
+          sleep 10
 
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ env.EC2_HOST }}:5000/api/health || echo "000")
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://codedetect.nt-nick.link/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
             echo "✅ Deployment successful!"
-            echo "🌐 App URL: http://${{ env.EC2_HOST }}:5000"
+            echo "🌐 App URL: http://codedetect.nt-nick.link"
+            curl -s http://codedetect.nt-nick.link/api/info | head -10
           else
             echo "⚠️ Health check response: $response"
             echo "App might still be starting..."
