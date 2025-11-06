@@ -160,10 +160,11 @@ if [ "$FLASK_ENV" = "production" ]; then
         --access-logfile - \
         --error-logfile - \
         --log-level info \
+        --chdir /app/backend \
         app:app
 else
     echo "🛠️  Starting with Flask dev server (development mode)"
-    exec python app.py
+    exec python backend/app.py
 fi
 
 # Note: 'exec' replaces this script process with the app process
