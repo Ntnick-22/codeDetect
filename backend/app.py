@@ -318,6 +318,33 @@ def health_check():
     }), 200
 
 
+@app.route('/api/info', methods=['GET'])
+def app_info():
+    """Application information endpoint - shows deployment details"""
+    return jsonify({
+        'version': '2.0.0-secrets',
+        'deployment_date': '2025-11-06',
+        'features': [
+            'AWS Parameter Store integration',
+            'CloudWatch monitoring',
+            'Production-ready configuration',
+            'Secure secrets management'
+        ],
+        'security': {
+            'secret_key_configured': bool(app.config.get('SECRET_KEY') and
+                                         app.config['SECRET_KEY'] != 'dev-secret-key-CHANGE-IN-PRODUCTION'),
+            'using_parameter_store': bool(os.environ.get('SECRET_KEY')),
+            's3_bucket_configured': bool(os.environ.get('S3_BUCKET_NAME'))
+        },
+        'environment': {
+            'flask_env': os.environ.get('FLASK_ENV', 'not set'),
+            's3_bucket': os.environ.get('S3_BUCKET_NAME', 'not set'),
+            'aws_region': os.environ.get('AWS_REGION', 'not set')
+        },
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
+
 @app.route('/api/history', methods=['GET'])
 def get_history():
     try:
