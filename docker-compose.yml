@@ -12,18 +12,35 @@ services:
       - DATABASE_URL=sqlite:////app/instance/codedetect.db
       - FLASK_ENV=production
     volumes:
-      # Persist database
-      - codedetect-data:/app/instance
-      # Persist uploads
-      - codedetect-uploads:/app/uploads
+      # ===================================================================
+      # DATABASE STORAGE - Using EFS (shared across all instances)
+      # ===================================================================
+      # Maps EFS mount (/mnt/efs/database) to container (/app/instance)
+      # Both EC2 instances write to the same EFS location
+      # This solves the multi-instance database sync problem
+      - /mnt/efs/database:/app/instance
+
+      # ===================================================================
+      # FILE UPLOADS - Using EFS (shared across all instances)
+      # ===================================================================
+      # Maps EFS upload folder to container uploads directory
+      # All uploaded files are accessible from both instances
+      - /mnt/efs/uploads:/app/uploads
     restart: unless-stopped
     networks:
       - codedetect-network
+    # Health check for load balancer
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   codedetect-network:
     driver: bridge
 
-volumes:
-  codedetect-data:
-  codedetect-uploads:
+# NOTE: We no longer use Docker volumes (codedetect-data, codedetect-uploads)
+# because those are local to each instance. Instead, we mount EFS directly.
+# EFS provides shared storage that all instances can access simultaneously.
