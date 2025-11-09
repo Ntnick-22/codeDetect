@@ -123,16 +123,21 @@ jobs:
       - name: Wait for Instance Refresh
         run: |
           echo "=== Monitoring instance refresh progress ==="
-          echo "This takes ~5 minutes (instances boot + health checks)"
+          echo "This takes ~10-15 minutes (instances boot + warmup + health checks)"
 
-          # Wait up to 10 minutes for refresh to complete
-          for i in {1..20}; do
+          # Wait up to 30 minutes for refresh to complete
+          for i in {1..40}; do
             STATUS=$(aws autoscaling describe-instance-refreshes \
               --auto-scaling-group-name codedetect-prod-asg \
               --query 'InstanceRefreshes[0].Status' \
               --output text)
 
-            echo "[$i/20] Refresh status: $STATUS"
+            PERCENT=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name codedetect-prod-asg \
+              --query 'InstanceRefreshes[0].PercentageComplete' \
+              --output text)
+
+            echo "[$i/40] Refresh status: $STATUS ($PERCENT% complete)"
 
             if [ "$STATUS" = "Successful" ]; then
               echo "✅ Instance refresh completed successfully!"
@@ -142,7 +147,7 @@ jobs:
               exit 1
             fi
 
-            sleep 30
+            sleep 45
           done
 
       - name: Health Check via Load Balancer
@@ -150,14 +155,26 @@ jobs:
           echo "=== Running health check ==="
           sleep 10
 
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://codedetect.nt-nick.link/api/health || echo "000")
+          # Try HTTPS first (since HTTP redirects to HTTPS)
+          response=$(curl -k -s -o /dev/null -w "%{http_code}" https://codedetect.nt-nick.link/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
             echo "✅ Deployment successful!"
-            echo "🌐 App URL: http://codedetect.nt-nick.link"
-            curl -s http://codedetect.nt-nick.link/api/info | head -10
+            echo "🌐 App URL: https://codedetect.nt-nick.link"
+            curl -k -s https://codedetect.nt-nick.link/api/info | head -10
           else
-            echo "⚠️ Health check response: $response"
-            echo "App might still be starting..."
-            exit 1
+            echo "⚠️ HTTPS health check response: $response"
+            echo "Trying HTTP with redirect follow..."
+
+            # Fallback: Try HTTP with redirect follow
+            response=$(curl -L -s -o /dev/null -w "%{http_code}" http://codedetect.nt-nick.link/api/health || echo "000")
+
+            if [ "$response" = "200" ]; then
+              echo "✅ Deployment successful (via HTTP redirect)!"
+              echo "🌐 App URL: http://codedetect.nt-nick.link (redirects to HTTPS)"
+            else
+              echo "❌ Health check failed with status: $response"
+              echo "App might still be starting or there's a configuration issue"
+              exit 1
+            fi
           fi
