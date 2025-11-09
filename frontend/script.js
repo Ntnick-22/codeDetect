@@ -443,10 +443,61 @@ async function loadHistory() {
     }
 }
 
-// Initialize on page load
+// ============================================
+// NAVIGATION & UI CONTROLS
+// ============================================
+
+// Section navigation
+function showSection(sectionName) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    // Show selected section
+    const targetSection = document.getElementById(`section-${sectionName}`);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+
+    // Update sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.target.closest('.sidebar-item')?.classList.add('active');
+
+    // Load history when history section is opened
+    if (sectionName === 'history') {
+        loadHistory();
+    }
+
+    // Update dashboard stats when dashboard is opened
+    if (sectionName === 'dashboard') {
+        updateDashboardStats();
+    }
+}
+
+// Make showSection global
+window.showSection = showSection;
+
+// Sidebar toggle for mobile
 document.addEventListener('DOMContentLoaded', () => {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mainContent.classList.toggle('expanded');
+        });
+    }
+
+    // Load initial data
     loadHistory();
-    
+    updateDashboardStats();
+
+    // Download button
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
@@ -456,3 +507,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Update dashboard statistics
+async function updateDashboardStats() {
+    try {
+        const response = await fetch('/api/history');
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+            // Total analyses
+            document.getElementById('dashTotalAnalyses').textContent = data.length;
+
+            // Average score
+            const avgScore = Math.round(data.reduce((sum, item) => sum + item.score, 0) / data.length);
+            document.getElementById('dashAvgScore').textContent = avgScore;
+
+            // Total security issues
+            const totalSecurity = data.reduce((sum, item) => sum + item.security_issues, 0);
+            document.getElementById('dashSecurityIssues').textContent = totalSecurity;
+
+            // Total quality issues
+            const totalQuality = data.reduce((sum, item) => sum + item.total_issues, 0);
+            document.getElementById('dashQualityIssues').textContent = totalQuality;
+        }
+    } catch (error) {
+        console.error('Failed to update dashboard stats:', error);
+    }
+}

@@ -4,39 +4,358 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeDetect - Code Quality Analyzer</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">CodeDetect</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#home">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="https://github.com/Ntnick-22/codeDetect" target="_blank">GitHub</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="https://linkedin.com/in/nyein-thu-naing-engineer" target="_blank">LinkedIn</a>
-                    </li>
-                </ul>
+    <!-- AWS Console-style Layout -->
+    <div class="dashboard-container">
+        <!-- Top Navigation Bar -->
+        <nav class="top-navbar">
+            <div class="d-flex align-items-center justify-content-between h-100 px-4">
+                <div class="d-flex align-items-center">
+                    <button class="sidebar-toggle" id="sidebarToggle">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h5 class="mb-0 ms-3 text-white fw-bold">CodeDetect</h5>
+                    <span class="badge bg-success ms-3">HA Deployed</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="text-white-50 me-3"><i class="bi bi-geo-alt"></i> EU-West-1</span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> User
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">About</a></li>
+                            <li><a class="dropdown-item" href="https://github.com/Ntnick-22/codeDetect" target="_blank">GitHub</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="showSection('deployment')">Deployment Info</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-header">
+                    <h6 class="text-white-50 mb-3 mt-3 px-3">SERVICES</h6>
+                </div>
+                <nav class="sidebar-menu">
+                    <a href="#" class="sidebar-item active" onclick="showSection('dashboard')">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="sidebar-item" onclick="showSection('upload')">
+                        <i class="bi bi-cloud-upload"></i>
+                        <span>Upload & Analyze</span>
+                    </a>
+                    <a href="#" class="sidebar-item" onclick="showSection('history')">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Analysis History</span>
+                    </a>
+                    <a href="#" class="sidebar-item" onclick="showSection('deployment')">
+                        <i class="bi bi-server"></i>
+                        <span>Deployment Info</span>
+                    </a>
+                </nav>
+                <div class="sidebar-footer">
+                    <div class="px-3 py-3">
+                        <small class="text-white-50">Version 2.1.0-HA</small><br>
+                        <small class="text-white-50">Auto Scaling: Active</small>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+
+            <!-- Dashboard Section -->
+            <div id="section-dashboard" class="content-section active">
+                <div class="content-header">
+                    <h2><i class="bi bi-speedometer2 me-2"></i>Dashboard</h2>
+                    <p class="text-muted">Code Quality Analysis Overview</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary">
+                            <i class="bi bi-code-square"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="dashTotalAnalyses">0</h3>
+                            <p>Total Analyses</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="dashAvgScore">--</h3>
+                            <p>Average Score</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-danger">
+                            <i class="bi bi-shield-exclamation"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="dashSecurityIssues">0</h3>
+                            <p>Security Issues</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="dashQualityIssues">0</h3>
+                            <p>Quality Issues</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="aws-card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-info-circle me-2"></i>Quick Start</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>Welcome to CodeDetect - Your automated Python code quality analyzer.</p>
+                                <ol>
+                                    <li>Navigate to <strong>Upload & Analyze</strong> to check your Python code</li>
+                                    <li>View detailed analysis results with security and quality metrics</li>
+                                    <li>Check <strong>Analysis History</strong> to see past results</li>
+                                    <li>Monitor <strong>Deployment Info</strong> for infrastructure status</li>
+                                </ol>
+                                <button class="btn btn-primary" onclick="showSection('upload')">
+                                    <i class="bi bi-cloud-upload me-2"></i>Start Analysis
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div id="section-upload" class="content-section">
+                <div class="content-header">
+                    <h2><i class="bi bi-cloud-upload me-2"></i>Upload & Analyze</h2>
+                    <p class="text-muted">Upload your Python files for comprehensive analysis</p>
+                </div>
+
+                <div class="aws-card">
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                            <i class="bi bi-file-earmark-code upload-icon"></i>
+                            <h4>Drop your Python file here</h4>
+                            <p>or click to browse</p>
+                            <input type="file" id="fileInput" accept=".py" style="display: none;">
+                        </div>
+                        <div class="mt-3 text-center">
+                            <div id="fileInfo" class="text-primary mb-3"></div>
+                            <button id="analyzeBtn" class="btn btn-primary" disabled>
+                                <span class="spinner-border spinner-border-sm" id="btnSpinner" style="display: none;"></span>
+                                <i class="bi bi-play-fill me-2"></i>
+                                <span id="btnText">Analyze Code</span>
+                            </button>
+                        </div>
+                        <div id="loadingMessage" class="mt-3 text-center text-primary" style="display: none;">
+                            <div class="spinner-border text-primary me-2" role="status"></div>
+                            Analyzing your code... Please wait
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="results" style="display: none;">
+                    <div class="aws-card mt-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-graph-up me-2"></i>Analysis Results</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div id="scoreCircle" class="score-circle mx-auto">--</div>
+                            <p id="scoreText" class="text-muted mt-3">Upload a file to see results</p>
+                            <button id="downloadBtn" class="btn btn-success mt-3" style="display: none;">
+                                <i class="bi bi-download me-2"></i>Download Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-primary"><i class="bi bi-bug"></i></div>
+                                <div class="stat-info">
+                                    <h3 id="totalIssues">0</h3>
+                                    <p>Quality Issues</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-danger"><i class="bi bi-shield-exclamation"></i></div>
+                                <div class="stat-info">
+                                    <h3 id="securityIssues">0</h3>
+                                    <p>Security Issues</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-warning"><i class="bi bi-diagram-3"></i></div>
+                                <div class="stat-info">
+                                    <h3 id="complexityIssues">0</h3>
+                                    <p>High Complexity</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aws-card mt-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-bar-chart me-2"></i>Visual Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <canvas id="issueTypeChart"></canvas>
+                                </div>
+                                <div class="col-md-6">
+                                    <canvas id="severityChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aws-card mt-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-list-ul me-2"></i>Detected Issues</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="issuesList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div id="section-history" class="content-section">
+                <div class="content-header">
+                    <h2><i class="bi bi-clock-history me-2"></i>Analysis History</h2>
+                    <p class="text-muted">View your past code analysis results</p>
+                </div>
+                <div class="aws-card">
+                    <div class="card-body">
+                        <div id="historyList">
+                            <p class="text-muted">Loading analysis history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployment Section -->
+            <div id="section-deployment" class="content-section">
+                <div class="content-header">
+                    <h2><i class="bi bi-server me-2"></i>Deployment Information</h2>
+                    <p class="text-muted">High Availability Infrastructure Status</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="aws-card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-hdd-rack me-2"></i>Infrastructure</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tr><td><strong>Region:</strong></td><td>EU-West-1 (Ireland)</td></tr>
+                                    <tr><td><strong>Environment:</strong></td><td><span class="badge bg-success">Production</span></td></tr>
+                                    <tr><td><strong>Auto Scaling:</strong></td><td>2-4 instances</td></tr>
+                                    <tr><td><strong>Load Balancer:</strong></td><td>Application LB</td></tr>
+                                    <tr><td><strong>Storage:</strong></td><td>EFS (Shared)</td></tr>
+                                    <tr><td><strong>Monitoring:</strong></td><td>CloudWatch Active</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="aws-card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-link-45deg me-2"></i>Access Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tr><td><strong>Domain:</strong></td><td><a href="http://codedetect.nt-nick.link" target="_blank">codedetect.nt-nick.link</a></td></tr>
+                                    <tr><td><strong>SSL/TLS:</strong></td><td><span class="badge bg-success">Active</span></td></tr>
+                                    <tr><td><strong>Version:</strong></td><td>2.1.0-HA</td></tr>
+                                    <tr><td><strong>Health Check:</strong></td><td><span class="badge bg-success">Healthy</span></td></tr>
+                                </table>
+                                <a href="http://codedetect.nt-nick.link" target="_blank" class="btn btn-primary btn-sm mt-2">
+                                    <i class="bi bi-box-arrow-up-right me-2"></i>Open Application
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="aws-card mt-4">
+                    <div class="card-header">
+                        <h5><i class="bi bi-gear me-2"></i>Technology Stack</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <h6 class="text-primary">Frontend</h6>
+                                <ul>
+                                    <li>HTML5 & CSS3</li>
+                                    <li>Bootstrap 5</li>
+                                    <li>Chart.js</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-primary">Backend</h6>
+                                <ul>
+                                    <li>Python 3.12</li>
+                                    <li>Flask Framework</li>
+                                    <li>SQLite + EFS</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-primary">Cloud (AWS)</h6>
+                                <ul>
+                                    <li>EC2 Auto Scaling</li>
+                                    <li>Application LB</li>
+                                    <li>S3 & EFS</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-primary">DevOps</h6>
+                                <ul>
+                                    <li>Docker & Compose</li>
+                                    <li>GitHub Actions</li>
+                                    <li>Terraform (IaC)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
 
     <!-- About Modal -->
     <div class="modal fade" id="aboutModal" tabindex="-1">
@@ -110,156 +429,6 @@
         </div>
     </div>
 
-    <div class="main-container">
-        <!-- Header -->
-        <div class="text-center text-white mb-4">
-            <h1 class="display-4 fw-bold">CodeDetect</h1>
-            <p class="lead">Automated Python Code Quality Analysis</p>
-            <p class="text-white-50 small">Full Stack + Cloud + DevOps Portfolio Project</p>
-        </div>
-
-        <!-- Upload Card -->
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Upload Your Python File</h5>
-                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                    <h3>Drop your Python file here</h3>
-                    <p>or click to browse</p>
-                    <input type="file" id="fileInput" accept=".py" style="display: none;">
-                </div>
-                <div class="mt-3 text-center">
-                    <button id="analyzeBtn" class="btn btn-primary btn-lg" disabled>
-                        <span class="spinner-border spinner-border-sm" id="btnSpinner" style="display: none;"></span>
-                        <span id="btnText">Analyze Code</span>
-                    </button>
-                </div>
-                </div>
-
-        <!-- History Card -->
-        <div class="card" id="historyCard" style="display: none;">
-            <div class="card-body">
-                <h5 class="card-title">Recent Analysis History</h5>
-                <div id="historyList" class="mt-3">
-                    <p class="text-muted">No analysis history yet</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Results Section -->
-                
-                <div id="loadingMessage" class="mt-3 text-center text-primary fw-bold" style="display: none;">
-                    <div class="spinner-border text-primary me-2" role="status"></div>
-                    Analyzing your code... Please wait
-                </div>
-                <div id="fileInfo" class="mt-2 text-muted text-center"></div>
-            </div>
-        </div>
-
-        <!-- Results Section -->
-        <div id="results">
-            <!-- Score Card -->
-            <div class="card">
-    <div class="card-body text-center">
-        <h5 class="card-title">Code Quality Score</h5>
-        <div id="scoreCircle" class="score-circle my-3">--</div>
-        <p id="scoreText" class="text-muted">Upload a file to see results</p>
-        <button id="downloadBtn" class="btn btn-success mt-3" style="display: none;">
-            Download Report
-        </button>
-    </div>
-</div>
-
-            <!-- Summary Card -->
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Summary</h5>
-                    <div class="row text-center">
-                        <div class="col-md-4">
-                            <h3 id="totalIssues" class="text-primary">0</h3>
-                            <p>Quality Issues</p>
-                        </div>
-                        <div class="col-md-4">
-                            <h3 id="securityIssues" class="text-danger">0</h3>
-                            <p>Security Issues</p>
-                        </div>
-                        <div class="col-md-4">
-                            <h3 id="complexityIssues" class="text-warning">0</h3>
-                            <p>High Complexity</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts Card -->
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Visual Analysis</h5>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <canvas id="issueTypeChart"></canvas>
-                        </div>
-                        <div class="col-md-6">
-                            <canvas id="severityChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Issues Details -->
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Detected Issues</h5>
-                    <div id="issuesList"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 text-center text-md-start mb-3">
-                    <h6 class="text-white fw-bold">CodeDetect</h6>
-                    <p class="text-white-50 small">Automated Code Quality Analysis</p>
-                    <p class="text-white-50 small">Built by <strong class="text-white">Nyein Thu Naing</strong></p>
-                    <p class="text-white-50 small">RF test Engineer → Cloud & DevOps</p>
-                </div>
-                <div class="col-md-4 text-center mb-3">
-                    <h6 class="text-white fw-bold mb-3">Tech Stack</h6>
-                    <div class="tech-badges">
-                        <span class="badge bg-primary m-1">Python</span>
-                        <span class="badge bg-success m-1">Flask</span>
-                        <span class="badge bg-info m-1">Docker</span>
-                        <span class="badge bg-warning text-dark m-1">AWS</span>
-                        <span class="badge bg-secondary m-1">Terraform</span>
-                        <span class="badge bg-dark m-1">GitHub Actions</span>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center text-md-end mb-3">
-                    <h6 class="text-white fw-bold">Connect</h6>
-                    <div class="social-links">
-                        <a href="https://github.com/Ntnick-22/codeDetect" target="_blank" class="text-white me-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-                            </svg>
-                        </a>
-                        <a href="https://linkedin.com/in/nyein-thu-naing-engineer" target="_blank" class="text-white">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
-                            </svg>
-                        </a>
-                    </div>
-                    <p class="text-white-50 small mt-3">Final College Project</p>
-                </div>
-            </div>
-            <hr class="bg-white-50">
-            <div class="text-center text-white-50 small pb-3">
-                <p class="mb-0">© 2025 CodeDetect | Built with passion for learning Full Stack + Cloud + DevOps</p>
-                <p class="mb-0 mt-1">Infrastructure as Code | CI/CD | Cloud-Native Architecture</p>
-            </div>
-        </div>
-    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
