@@ -10,11 +10,11 @@
 # ----------------------------------------------------------------------------
 # Creates a Virtual Private Cloud - your own isolated network in AWS
 resource "aws_vpc" "main" {
-  cidr_block = local.vpc_cidr  # IP range: 10.0.0.0/16 (65,536 IPs)
+  cidr_block = local.vpc_cidr # IP range: 10.0.0.0/16 (65,536 IPs)
 
   # Enable DNS support (allows using domain names instead of IPs)
-  enable_dns_hostnames = true  # Instances get public DNS names
-  enable_dns_support   = true  # DNS resolution works in VPC
+  enable_dns_hostnames = true # Instances get public DNS names
+  enable_dns_support   = true # DNS resolution works in VPC
 
   tags = merge(
     local.common_tags,
@@ -30,7 +30,7 @@ resource "aws_vpc" "main" {
 # This allows your VPC to communicate with the internet
 # Without this, your EC2 instance can't send/receive internet traffic
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id  # Attach to our VPC
+  vpc_id = aws_vpc.main.id # Attach to our VPC
 
   tags = merge(
     local.common_tags,
@@ -50,8 +50,8 @@ resource "aws_internet_gateway" "main" {
 # Public Subnet 1 (Availability Zone A)
 resource "aws_subnet" "public_1" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"  # 256 IPs (10.0.1.0 - 10.0.1.255)
-  availability_zone = data.aws_availability_zones.available.names[0]  # First AZ
+  cidr_block        = "10.0.1.0/24"                                  # 256 IPs (10.0.1.0 - 10.0.1.255)
+  availability_zone = data.aws_availability_zones.available.names[0] # First AZ
 
   # Automatically assign public IP to instances in this subnet
   map_public_ip_on_launch = true
@@ -68,8 +68,8 @@ resource "aws_subnet" "public_1" {
 # Public Subnet 2 (Availability Zone B)
 resource "aws_subnet" "public_2" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"  # 256 IPs (10.0.2.0 - 10.0.2.255)
-  availability_zone = data.aws_availability_zones.available.names[1]  # Second AZ
+  cidr_block        = "10.0.2.0/24"                                  # 256 IPs (10.0.2.0 - 10.0.2.255)
+  availability_zone = data.aws_availability_zones.available.names[1] # Second AZ
 
   map_public_ip_on_launch = true
 
@@ -93,7 +93,7 @@ resource "aws_route_table" "public" {
 
   # Route all internet traffic (0.0.0.0/0) to Internet Gateway
   route {
-    cidr_block = "0.0.0.0/0"  # All IPs (the entire internet)
+    cidr_block = "0.0.0.0/0" # All IPs (the entire internet)
     gateway_id = aws_internet_gateway.main.id
   }
 

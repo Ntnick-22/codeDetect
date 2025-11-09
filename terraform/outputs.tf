@@ -15,10 +15,10 @@
 #   value       = aws_instance.main.id
 # }
 
-output "ec2_public_ip" {
-  description = "Public IP address (Elastic IP) - reserved but not attached"
-  value       = aws_eip.main.public_ip
-}
+# output "ec2_public_ip" {
+#   description = "Removed - Using Auto Scaling Group with Load Balancer"
+#   value       = "See load_balancer_dns output"
+# }
 
 # output "ec2_instance_type" {
 #   description = "Type of EC2 instance"
@@ -87,8 +87,8 @@ output "route53_nameservers" {
 # ----------------------------------------------------------------------------
 
 output "ssh_connection_command" {
-  description = "Command to SSH into EC2 instance"
-  value       = "ssh -i codedetect-key ec2-user@${aws_eip.main.public_ip}"
+  description = "Command to SSH into EC2 instances (use instance IPs from AWS Console)"
+  value       = "aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${aws_autoscaling_group.app.name}' --query 'Reservations[*].Instances[*].[InstanceId,PublicIpAddress,State.Name]' --output table"
 }
 
 output "ssh_key_name" {
@@ -103,15 +103,24 @@ output "ssh_key_name" {
 output "deployment_commands" {
   description = "Commands to deploy your application"
   value       = <<-EOT
-    # 1. SSH into EC2
-    ssh -i codedetect-key ec2-user@${aws_eip.main.public_ip}
-    
-    # 2. Clone your repository
-    cd /home/ec2-user/app
-    git clone https://github.com/yourusername/codedetect.git .
-    
-    # 3. Configure environment
-    export DATABASE_URL=sqlite:///instance/codedetect.db
+    # With Auto Scaling Group, deployment is automated via instance refresh
+    # To trigger deployment:
+
+    # 1. Push code to GitHub
+    git push origin main
+
+    # 2. Trigger instance refresh (zero-downtime rolling update)
+    aws autoscaling start-instance-refresh \
+      --auto-scaling-group-name ${aws_autoscaling_group.app.name} \
+      --preferences MinHealthyPercentage=50
+
+    # 3. Monitor refresh status
+    aws autoscaling describe-instance-refreshes \
+      --auto-scaling-group-name ${aws_autoscaling_group.app.name}
+
+    # Note: Manual SSH deployment not recommended with Auto Scaling
+    # If needed for debugging, get instance IPs:
+    # aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${aws_autoscaling_group.app.name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
     export S3_BUCKET_NAME=${aws_s3_bucket.uploads.id}
     
     # 4. Start application with Docker
@@ -298,16 +307,28 @@ output "next_steps" {
     1. VERIFY DNS PROPAGATION (wait 5-10 minutes)
        Check: https://dnschecker.org
        Domain: ${var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name}
-    
-    2. SSH INTO EC2
-     ssh -i codedetect-key ec2-user@${aws_eip.main.public_ip}
-    
-    3. DEPLOY YOUR APPLICATION
-       - Clone your Git repository
-       - Configure environment variables
-       - Run: docker-compose up -d
-    
+
+    2. CHECK LOAD BALANCER
+       URL: ${aws_lb.main.dns_name}
+       Health: All targets should be healthy
+
+    3. CHECK AUTO SCALING GROUP
+       Instances: Should have 2+ healthy instances
+       Command: aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${aws_autoscaling_group.app.name}
+
     4. TEST YOUR APPLICATION
+       HTTPS: https://${var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name}
+       HTTP redirects automatically to HTTPS
+
+    5. MONITOR EFS DATABASE
+       Database on shared storage: /mnt/efs/database/codedetect.db
+       Both instances use same database
+
+    6. SSH FOR DEBUGGING (if needed)
+       Get instance IPs: aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${aws_autoscaling_group.app.name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
+       SSH: ssh -i codedetect-key ec2-user@<INSTANCE_IP>
+
+    7. TEST APPLICATION
        URL: ${var.subdomain != "" ? "http://${var.subdomain}.${var.domain_name}:5000" : "http://${var.domain_name}:5000"}
     
     5. CONFIGURE FIREWALL (if needed)

@@ -14,40 +14,13 @@ resource "aws_key_pair" "main" {
 }
 
 # ----------------------------------------------------------------------------
-# ELASTIC IP
+# ELASTIC IP - REMOVED
 # ----------------------------------------------------------------------------
-# Static public IP address that doesn't change when you restart EC2
-# Important for DNS (your domain always points to same IP)
-
-resource "aws_eip" "main" {
-  domain = "vpc" # Allocate in VPC
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${local.name_prefix}-eip"
-    }
-  )
-
-  # Lifecycle policy: Prevent accidental deletion of Elastic IP
-  # This keeps the same IP address across rebuilds
-  # GitHub secrets will work permanently without manual updates
-  # Cost: $0.00 (free when attached to EC2)
-  # To destroy: Remove this block, apply, then destroy
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  # Depends on Internet Gateway existing first
-  depends_on = [aws_internet_gateway.main]
-}
-
-# Associate Elastic IP with EC2 instance
-# COMMENTED OUT: Now using Auto Scaling Group with Load Balancer instead
-# resource "aws_eip_association" "main" {
-#   instance_id   = aws_instance.main.id
-#   allocation_id = aws_eip.main.id
-# }
+# EIP was used for single EC2 instance setup
+# Now using Application Load Balancer (ALB) which has its own DNS
+# ALB DNS: codedetect-prod-alb-*.eu-west-1.elb.amazonaws.com
+# Domain points to ALB via Route53 ALIAS record (see route53.tf)
+# No static IP needed for HA setup with load balancer
 
 # ----------------------------------------------------------------------------
 # EC2 USER DATA SCRIPT
@@ -80,6 +53,40 @@ locals {
 
     # Install Git (to clone your repo)
     yum install -y git
+
+    # ========================================================================
+    # EFS SETUP - Mount shared filesystem for database
+    # ========================================================================
+    # Install EFS utilities (needed to mount EFS)
+    yum install -y amazon-efs-utils
+
+    # Create mount point directory
+    mkdir -p /mnt/efs
+
+    # Mount EFS using the EFS ID
+    # This mounts the shared drive where database will be stored
+    echo "${aws_efs_file_system.main.id}:/ /mnt/efs efs _netdev,noresvport,tls 0 0" >> /etc/fstab
+
+    # Mount all filesystems from fstab
+    mount -a -t efs defaults
+
+    # Wait for EFS to be ready
+    sleep 5
+
+    # Create database directory on EFS (shared between all instances)
+    mkdir -p /mnt/efs/database
+
+    # Create uploads directory on EFS (shared file uploads)
+    mkdir -p /mnt/efs/uploads
+
+    # Set ownership to ec2-user so Docker can write to it
+    chown -R ec2-user:ec2-user /mnt/efs/database
+    chown -R ec2-user:ec2-user /mnt/efs/uploads
+    chmod -R 755 /mnt/efs/database
+    chmod -R 755 /mnt/efs/uploads
+
+    echo "EFS mounted successfully at /mnt/efs" >> /var/log/codedetect-deploy.log
+    # ========================================================================
 
     # Install Nginx (reverse proxy for port 80 -> 5000)
     amazon-linux-extras install -y nginx1
@@ -128,6 +135,51 @@ NGINX_EOF
 
     # Build and start application as ec2-user
     su - ec2-user -c "cd /home/ec2-user/app && docker build -t codedetect-app:latest . 2>&1" >> /var/log/codedetect-deploy.log
+
+    # ========================================================================
+    # AUTOMATIC DATA MIGRATION TO EFS (First Time Setup Only)
+    # ========================================================================
+    echo "=== Checking for existing data to migrate to EFS ===" >> /var/log/codedetect-deploy.log
+
+    # Check if database already exists on EFS
+    if [ ! -f /mnt/efs/database/codedetect.db ]; then
+      echo "First time EFS setup detected - checking for existing data" >> /var/log/codedetect-deploy.log
+
+      # Start temporary container with old volume to extract data
+      # This runs BEFORE the new docker-compose to capture old data
+      if docker volume ls | grep -q codedetect-data; then
+        echo "Found existing codedetect-data volume - migrating to EFS" >> /var/log/codedetect-deploy.log
+
+        # Use Alpine container to copy from old volume to EFS
+        docker run --rm \
+          -v codedetect-data:/old-data:ro \
+          -v /mnt/efs/database:/new-data \
+          alpine sh -c 'if [ -f /old-data/codedetect.db ]; then cp /old-data/codedetect.db /new-data/; echo "Database copied"; else echo "No database file found"; fi' \
+          >> /var/log/codedetect-deploy.log 2>&1
+
+        echo "=== Database migration completed ===" >> /var/log/codedetect-deploy.log
+      else
+        echo "No existing data volume found - starting with fresh database" >> /var/log/codedetect-deploy.log
+      fi
+
+      # Migrate uploads if they exist
+      if docker volume ls | grep -q codedetect-uploads; then
+        echo "Found existing codedetect-uploads volume - migrating to EFS" >> /var/log/codedetect-deploy.log
+
+        docker run --rm \
+          -v codedetect-uploads:/old-uploads:ro \
+          -v /mnt/efs/uploads:/new-uploads \
+          alpine sh -c 'cp -r /old-uploads/* /new-uploads/ 2>/dev/null || echo "No uploads to migrate"' \
+          >> /var/log/codedetect-deploy.log 2>&1
+
+        echo "=== Uploads migration completed ===" >> /var/log/codedetect-deploy.log
+      fi
+    else
+      echo "Database already exists on EFS - skipping migration" >> /var/log/codedetect-deploy.log
+    fi
+    # ========================================================================
+
+    # Now start application with EFS storage
     su - ec2-user -c "cd /home/ec2-user/app && docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
 
     echo "=== Deployment complete at $(date) ===" >> /var/log/codedetect-deploy.log

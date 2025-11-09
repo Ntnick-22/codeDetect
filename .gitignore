@@ -75,3 +75,5 @@ terraform/crash.log
 terraform/*key*
 terraform/*.pem
 terraform/SECRETS_UPDATE.md
+terraform/*.tfplan
+terraform/tfplan

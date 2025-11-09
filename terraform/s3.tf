@@ -8,7 +8,7 @@
 # S3 BUCKET
 # ----------------------------------------------------------------------------
 resource "aws_s3_bucket" "uploads" {
-  bucket = var.s3_bucket_name  # Must be globally unique
+  bucket = var.s3_bucket_name # Must be globally unique
 
   tags = merge(
     local.common_tags,
@@ -39,7 +39,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"  # AWS-managed encryption keys
+      sse_algorithm = "AES256" # AWS-managed encryption keys
     }
   }
 }
@@ -69,7 +69,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     id     = "delete-old-versions"
     status = "Enabled"
 
-    filter {}  # Empty filter applies to all objects
+    filter {} # Empty filter applies to all objects
 
     noncurrent_version_expiration {
       noncurrent_days = 30
@@ -81,7 +81,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     id     = "cleanup-incomplete-uploads"
     status = "Enabled"
 
-    filter {}  # Empty filter applies to all objects
+    filter {} # Empty filter applies to all objects
 
     abort_incomplete_multipart_upload {
       days_after_initiation = 7

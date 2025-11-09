@@ -33,7 +33,7 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
   from_port   = 22
   to_port     = 22
   ip_protocol = "tcp"
-  cidr_ipv4   = var.allowed_ssh_ip  # Restrict to your IP for security
+  cidr_ipv4   = var.allowed_ssh_ip # Restrict to your IP for security
 
   tags = {
     Name = "SSH Access"
@@ -48,7 +48,7 @@ resource "aws_vpc_security_group_ingress_rule" "http" {
   from_port   = 80
   to_port     = 80
   ip_protocol = "tcp"
-  cidr_ipv4   = "0.0.0.0/0"  # Allow from anywhere
+  cidr_ipv4   = "0.0.0.0/0" # Allow from anywhere
 
   tags = {
     Name = "HTTP Access"
@@ -63,7 +63,7 @@ resource "aws_vpc_security_group_ingress_rule" "https" {
   from_port   = 443
   to_port     = 443
   ip_protocol = "tcp"
-  cidr_ipv4   = "0.0.0.0/0"  # Allow from anywhere
+  cidr_ipv4   = "0.0.0.0/0" # Allow from anywhere
 
   tags = {
     Name = "HTTPS Access"
@@ -75,10 +75,10 @@ resource "aws_vpc_security_group_ingress_rule" "app" {
   security_group_id = aws_security_group.ec2.id
   description       = "Application port for Flask/CodeDetect"
 
-  from_port   = var.app_port  # 5000
+  from_port   = var.app_port # 5000
   to_port     = var.app_port
   ip_protocol = "tcp"
-  cidr_ipv4   = "0.0.0.0/0"  # Allow from anywhere
+  cidr_ipv4   = "0.0.0.0/0" # Allow from anywhere
 
   tags = {
     Name = "Application Port"
@@ -110,7 +110,7 @@ resource "aws_vpc_security_group_egress_rule" "all" {
   security_group_id = aws_security_group.ec2.id
   description       = "Allow all outbound traffic"
 
-  ip_protocol = "-1"  # -1 means all protocols
+  ip_protocol = "-1" # -1 means all protocols
   cidr_ipv4   = "0.0.0.0/0"
 
   tags = {

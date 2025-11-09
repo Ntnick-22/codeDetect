@@ -18,8 +18,8 @@ terraform {
   required_providers {
     # AWS provider for Amazon Web Services
     aws = {
-      source  = "hashicorp/aws"  # Official AWS provider
-      version = "~> 5.0"         # Use version 5.x (latest stable)
+      source  = "hashicorp/aws" # Official AWS provider
+      version = "~> 5.0"        # Use version 5.x (latest stable)
     }
   }
 
@@ -36,16 +36,16 @@ terraform {
 # ----------------------------------------------------------------------------
 # Configure how Terraform connects to AWS
 provider "aws" {
-  region = var.aws_region  # Which AWS region to use (e.g., us-east-1)
+  region = var.aws_region # Which AWS region to use (e.g., us-east-1)
 
   # Tags applied to ALL resources created by this Terraform config
   default_tags {
     tags = {
-      Project     = "CodeDetect"           # Project name
-      Environment = var.environment        # dev, staging, or prod
-      ManagedBy   = "Terraform"           # Shows this is automated
-      Owner       = var.owner_email       # Your email
-       # When it was created
+      Project     = "CodeDetect"    # Project name
+      Environment = var.environment # dev, staging, or prod
+      ManagedBy   = "Terraform"     # Shows this is automated
+      Owner       = var.owner_email # Your email
+      # When it was created
     }
   }
 }
@@ -57,23 +57,23 @@ provider "aws" {
 
 # Get list of available AWS availability zones in current region
 data "aws_availability_zones" "available" {
-  state = "available"  # Only zones that are currently operational
+  state = "available" # Only zones that are currently operational
 }
 
 # Get the latest Amazon Linux 2 AMI (machine image) for EC2
 data "aws_ami" "amazon_linux_2" {
-  most_recent = true  # Get the newest version
-  owners      = ["amazon"]  # Official Amazon AMIs
+  most_recent = true       # Get the newest version
+  owners      = ["amazon"] # Official Amazon AMIs
 
   # Filter to find exactly what we want
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]  # Amazon Linux 2, 64-bit
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"] # Amazon Linux 2, 64-bit
   }
 
   filter {
     name   = "virtualization-type"
-    values = ["hvm"]  # Hardware virtual machine (faster)
+    values = ["hvm"] # Hardware virtual machine (faster)
   }
 }
 
@@ -103,11 +103,11 @@ locals {
   }
 
   # Database configuration
-  db_name     = replace(local.app_name, "-", "_")  # Database names can't have hyphens
-  db_port     = 5432  # Standard PostgreSQL port
+  db_name = replace(local.app_name, "-", "_") # Database names can't have hyphens
+  db_port = 5432                              # Standard PostgreSQL port
 
   # Network configuration
-  vpc_cidr = "10.0.0.0/16"  # VPC IP range (65,536 IPs)
+  vpc_cidr = "10.0.0.0/16" # VPC IP range (65,536 IPs)
 }
 
 # ============================================================================

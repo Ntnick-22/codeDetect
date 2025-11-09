@@ -290,7 +290,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 24
         height = 1
         properties = {
-          markdown = "# 📊 CodeDetect Infrastructure Monitoring\n**Instance:** ${aws_instance.main.id} | **IP:** ${aws_eip.main.public_ip} | **Region:** ${var.aws_region}"
+          markdown = "# 📊 CodeDetect Infrastructure Monitoring\n**Auto Scaling Group:** ${aws_autoscaling_group.app.name} | **Load Balancer:** ${aws_lb.main.dns_name} | **Region:** ${var.aws_region}\n**EFS:** ${aws_efs_file_system.main.id} | **Database:** Shared on EFS"
         }
       },
 
