@@ -8,6 +8,9 @@ import json
 from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError
+import tempfile
+import autopep8
+import ast
 
 # Flask setup
 app = Flask(
@@ -235,6 +238,10 @@ def analyze_code():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(filepath)
 
+        # Read original code for auto-fix feature
+        with open(filepath, 'r', encoding='utf-8') as f:
+            original_code = f.read()
+
         # === Upload to S3 before analyzing ===
         bucket_name = os.environ.get(
             'S3_BUCKET_NAME', 'codedetect-nick-uploads-12345')
@@ -259,6 +266,7 @@ def analyze_code():
             'filename': filename,
             'timestamp': timestamp,
             'score': score,
+            'original_code': original_code,  # Include original code for auto-fix
             'analysis': {
                 'quality_issues': pylint_results[:10],
                 'security_issues': bandit_results,
@@ -357,6 +365,121 @@ def get_history():
         return jsonify([analysis.to_dict() for analysis in analyses]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def add_docstrings(code):
+    """Add basic docstrings to functions and classes that are missing them"""
+    try:
+        tree = ast.parse(code)
+        lines = code.split('\n')
+
+        # Track positions where we need to add docstrings
+        insertions = []
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                # Check if docstring exists
+                has_docstring = (
+                    len(node.body) > 0 and
+                    isinstance(node.body[0], ast.Expr) and
+                    isinstance(node.body[0].value, ast.Constant)
+                )
+
+                if not has_docstring and hasattr(node, 'lineno'):
+                    indent = len(lines[node.lineno - 1]) - len(lines[node.lineno - 1].lstrip())
+                    if isinstance(node, ast.FunctionDef):
+                        docstring = f'{" " * (indent + 4)}"""TODO: Add function description."""'
+                    else:
+                        docstring = f'{" " * (indent + 4)}"""TODO: Add class description."""'
+                    insertions.append((node.lineno, docstring))
+
+        # Apply insertions in reverse order to maintain line numbers
+        for lineno, docstring in sorted(insertions, reverse=True):
+            lines.insert(lineno, docstring)
+
+        return '\n'.join(lines)
+    except:
+        return code
+
+
+def apply_autoflake(code):
+    """Remove unused imports and variables"""
+    try:
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(code)
+            temp_path = f.name
+
+        # Run autoflake
+        result = subprocess.run(
+            ['autoflake', '--remove-all-unused-imports', '--remove-unused-variables', temp_path],
+            capture_output=True, text=True, timeout=10
+        )
+
+        # Clean up temp file
+        os.unlink(temp_path)
+
+        if result.returncode == 0:
+            return result.stdout
+        return code
+    except Exception as e:
+        print(f"Autoflake error: {e}")
+        return code
+
+
+@app.route('/api/autofix', methods=['POST'])
+def autofix_code():
+    """Generate fixed version of code based on selected fixes"""
+    try:
+        data = request.get_json()
+        original_code = data.get('code')
+        selected_fixes = data.get('fixes', [])  # List of fix types to apply
+
+        if not original_code:
+            return jsonify({'error': 'No code provided'}), 400
+
+        fixed_code = original_code
+        applied_fixes = []
+
+        # Apply fixes based on selections
+        if 'formatting' in selected_fixes:
+            # Apply autopep8 for PEP 8 formatting
+            fixed_code = autopep8.fix_code(
+                fixed_code,
+                options={
+                    'aggressive': 1,
+                    'max_line_length': 100
+                }
+            )
+            applied_fixes.append('PEP 8 formatting')
+
+        if 'unused-imports' in selected_fixes:
+            # Remove unused imports and variables
+            fixed_code = apply_autoflake(fixed_code)
+            applied_fixes.append('Removed unused imports/variables')
+
+        if 'docstrings' in selected_fixes:
+            # Add missing docstrings
+            fixed_code = add_docstrings(fixed_code)
+            applied_fixes.append('Added missing docstrings')
+
+        if 'trailing-whitespace' in selected_fixes:
+            # Remove trailing whitespace
+            lines = fixed_code.split('\n')
+            fixed_code = '\n'.join(line.rstrip() for line in lines)
+            applied_fixes.append('Removed trailing whitespace')
+
+        return jsonify({
+            'fixed_code': fixed_code,
+            'applied_fixes': applied_fixes,
+            'changes_made': fixed_code != original_code
+        }), 200
+
+    except Exception as e:
+        print(f"Autofix error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Auto-fix failed', 'details': str(e)}), 500
 
 
 @app.route('/api/stats', methods=['GET'])

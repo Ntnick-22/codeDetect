@@ -264,6 +264,8 @@ window.toggleDetails = function(id) {
 // Global variables
 let selectedFile = null;
 let currentAnalysisData = null;
+let fixedCodeData = null;
+let isFixGenerated = false;
 
 // File input handling
 document.getElementById('fileInput').addEventListener('change', function(e) {
@@ -345,6 +347,27 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 function displayResults(data) {
     // Store data for download
     currentAnalysisData = data;
+
+    // Reset auto-fix state for new analysis
+    fixedCodeData = null;
+    isFixGenerated = false;
+    const generateFixedBtn = document.getElementById('generateFixedBtn');
+    if (generateFixedBtn) {
+        generateFixedBtn.textContent = 'Generate Fixed Code';
+        generateFixedBtn.className = 'btn btn-success';
+        const btnText = document.getElementById('fixBtnText');
+        const btnIcon = document.getElementById('fixIcon');
+        if (btnText) btnText.textContent = 'Generate Fixed Code';
+        if (btnIcon) {
+            btnIcon.className = 'bi bi-magic me-2';
+            btnIcon.style.display = 'inline';
+        }
+    }
+    const fixSuccess = document.getElementById('fixSuccess');
+    if (fixSuccess) {
+        fixSuccess.style.display = 'none';
+    }
+
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) {
         downloadBtn.style.display = 'inline-block';
@@ -761,7 +784,142 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Auto-fix button
+    const generateFixedBtn = document.getElementById('generateFixedBtn');
+    if (generateFixedBtn) {
+        generateFixedBtn.addEventListener('click', handleFixButtonClick);
+    }
 });
+
+// Handle fix button click (either generate or download)
+function handleFixButtonClick() {
+    console.log('Button clicked. isFixGenerated:', isFixGenerated);
+    console.log('fixedCodeData exists:', !!fixedCodeData);
+    console.log('currentAnalysisData exists:', !!currentAnalysisData);
+
+    if (isFixGenerated) {
+        console.log('Calling downloadFixedCode');
+        downloadFixedCode();
+    } else {
+        console.log('Calling generateFixedCode');
+        generateFixedCode();
+    }
+}
+
+// Generate fixed code function
+async function generateFixedCode() {
+    if (!currentAnalysisData || !currentAnalysisData.original_code) {
+        alert('No code available to fix');
+        return;
+    }
+
+    // Get selected fixes
+    const selectedFixes = [];
+    const checkboxes = document.querySelectorAll('#autofixCard input[type="checkbox"]:checked');
+    checkboxes.forEach(cb => selectedFixes.push(cb.value));
+
+    if (selectedFixes.length === 0) {
+        alert('Please select at least one fix to apply');
+        return;
+    }
+
+    // Show loading state
+    const btn = document.getElementById('generateFixedBtn');
+    const btnText = document.getElementById('fixBtnText');
+    const btnIcon = document.getElementById('fixIcon');
+    const spinner = document.getElementById('fixSpinner');
+
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnIcon.style.display = 'none';
+    btnText.textContent = ' Generating...';
+
+    try {
+        const response = await fetch('/api/autofix', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                code: currentAnalysisData.original_code,
+                fixes: selectedFixes
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.changes_made) {
+            fixedCodeData = data.fixed_code;
+            isFixGenerated = true;
+
+            console.log('Fixed code generated, length:', fixedCodeData.length);
+
+            // Show success message
+            const successDiv = document.getElementById('fixSuccess');
+            const fixesList = document.getElementById('appliedFixesList');
+            fixesList.innerHTML = data.applied_fixes.map(fix => `<li>${fix}</li>`).join('');
+            successDiv.style.display = 'block';
+
+            // Change button to download
+            btnText.textContent = 'Download Fixed Code';
+            btnIcon.className = 'bi bi-download me-2';
+            btnIcon.style.display = 'inline';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-primary');
+            btn.disabled = false;
+        } else if (!data.changes_made) {
+            alert('No changes were made. Your code is already clean for the selected fixes!');
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            btnIcon.style.display = 'inline';
+            btnText.textContent = 'Generate Fixed Code';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate fixed code'));
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            btnIcon.style.display = 'inline';
+            btnText.textContent = 'Generate Fixed Code';
+        }
+    } catch (error) {
+        alert('Failed to generate fixed code: ' + error.message);
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        btnIcon.style.display = 'inline';
+        btnText.textContent = 'Generate Fixed Code';
+    } finally {
+        spinner.style.display = 'none';
+    }
+}
+
+// Download fixed code function
+function downloadFixedCode() {
+    console.log('Download called, fixedCodeData:', fixedCodeData ? 'exists' : 'null');
+    console.log('currentAnalysisData:', currentAnalysisData ? 'exists' : 'null');
+
+    if (!fixedCodeData) {
+        alert('No fixed code available. Please generate fixes first.');
+        return;
+    }
+
+    if (!currentAnalysisData) {
+        alert('No analysis data available.');
+        return;
+    }
+
+    const filename = currentAnalysisData.filename.replace('.py', '_fixed.py');
+    const blob = new Blob([fixedCodeData], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    console.log('Download completed:', filename);
+}
 
 // Update dashboard statistics
 async function updateDashboardStats() {
