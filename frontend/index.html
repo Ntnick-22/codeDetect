@@ -272,62 +272,6 @@
                         </div>
                     </div>
 
-                    <div class="aws-card mt-4" id="autofixCard">
-                        <div class="card-header">
-                            <h5><i class="bi bi-magic me-2"></i>Auto-Fix Available</h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Select which fixes to apply automatically:</p>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="fix-formatting" value="formatting" checked>
-                                <label class="form-check-label" for="fix-formatting">
-                                    <strong>PEP 8 Formatting</strong>
-                                    <br>
-                                    <small class="text-muted">Fix spacing, line length, indentation, and other style issues</small>
-                                </label>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="fix-unused" value="unused-imports" checked>
-                                <label class="form-check-label" for="fix-unused">
-                                    <strong>Remove Unused Imports & Variables</strong>
-                                    <br>
-                                    <small class="text-muted">Automatically remove unused imports and variables</small>
-                                </label>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="fix-docstrings" value="docstrings">
-                                <label class="form-check-label" for="fix-docstrings">
-                                    <strong>Add Missing Docstrings</strong>
-                                    <br>
-                                    <small class="text-muted">Add placeholder docstrings to functions and classes</small>
-                                </label>
-                            </div>
-
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="fix-whitespace" value="trailing-whitespace" checked>
-                                <label class="form-check-label" for="fix-whitespace">
-                                    <strong>Remove Trailing Whitespace</strong>
-                                    <br>
-                                    <small class="text-muted">Clean up extra spaces at the end of lines</small>
-                                </label>
-                            </div>
-
-                            <button id="generateFixedBtn" class="btn btn-success">
-                                <span class="spinner-border spinner-border-sm" id="fixSpinner" style="display: none;"></span>
-                                <i class="bi bi-magic me-2" id="fixIcon"></i>
-                                <span id="fixBtnText">Generate Fixed Code</span>
-                            </button>
-
-                            <div id="fixSuccess" class="alert alert-success mt-3" style="display: none;">
-                                <i class="bi bi-check-circle me-2"></i>
-                                <strong>Fixes applied successfully!</strong>
-                                <ul id="appliedFixesList" class="mb-0 mt-2"></ul>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
