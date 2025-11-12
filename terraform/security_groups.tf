@@ -85,6 +85,21 @@ resource "aws_vpc_security_group_ingress_rule" "app" {
   }
 }
 
+# Grafana Port (3000) - Monitoring dashboard
+resource "aws_vpc_security_group_ingress_rule" "grafana" {
+  security_group_id = aws_security_group.ec2.id
+  description       = "Grafana monitoring dashboard"
+
+  from_port   = 3000
+  to_port     = 3000
+  ip_protocol = "tcp"
+  cidr_ipv4   = "0.0.0.0/0" # Allow from anywhere
+
+  tags = {
+    Name = "Grafana Port"
+  }
+}
+
 # Optional: Webhook Port (8000) - If using webhook deployment
 # Uncomment if you switch back to webhook-based deployment
 # resource "aws_vpc_security_group_ingress_rule" "webhook" {
