@@ -351,9 +351,57 @@ def app_info():
 @app.route('/api/history', methods=['GET'])
 def get_history():
     try:
+        limit = request.args.get('limit', 5, type=int)
         analyses = Analysis.query.order_by(
-            Analysis.timestamp.desc()).limit(5).all()
+            Analysis.timestamp.desc()).limit(limit).all()
         return jsonify([analysis.to_dict() for analysis in analyses]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """Get overall statistics for dashboard trends"""
+    try:
+        # Get last 10 analyses for trends
+        recent_analyses = Analysis.query.order_by(
+            Analysis.timestamp.desc()).limit(10).all()
+
+        if not recent_analyses:
+            return jsonify({
+                'total_analyses': 0,
+                'avg_score': 0,
+                'total_security_issues': 0,
+                'total_quality_issues': 0,
+                'trend_data': []
+            }), 200
+
+        # Calculate overall stats
+        total_analyses = Analysis.query.count()
+        all_analyses = Analysis.query.all()
+
+        avg_score = sum(a.score for a in all_analyses) / len(all_analyses) if all_analyses else 0
+        total_security = sum(a.security_issues for a in all_analyses)
+        total_quality = sum(a.total_issues for a in all_analyses)
+
+        # Prepare trend data (last 10 in chronological order)
+        trend_data = [{
+            'filename': a.filename[:20] + '...' if len(a.filename) > 20 else a.filename,
+            'timestamp': a.timestamp.isoformat(),
+            'score': a.score,
+            'total_issues': a.total_issues,
+            'security_issues': a.security_issues,
+            'complexity_issues': a.complexity_issues
+        } for a in reversed(recent_analyses)]
+
+        return jsonify({
+            'total_analyses': total_analyses,
+            'avg_score': round(avg_score, 1),
+            'total_security_issues': total_security,
+            'total_quality_issues': total_quality,
+            'trend_data': trend_data
+        }), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -1,18 +1,248 @@
-// Issue fix suggestions
+// Enhanced issue fix suggestions with examples
 const fixSuggestions = {
-    'missing-docstring': 'Add a docstring at the beginning of your function/class. Example: """This function does X"""',
-    'line-too-long': 'Break long lines into multiple lines. Maximum recommended length is 79-100 characters.',
-    'trailing-whitespace': 'Remove extra spaces at the end of lines.',
-    'unused-variable': 'Remove unused variables or use them in your code.',
-    'undefined-variable': 'Make sure the variable is defined before using it. Check for typos.',
-    'invalid-name': 'Use descriptive names. Variables: lowercase_with_underscores',
-    'hardcoded-password': 'CRITICAL: Never hardcode passwords! Use environment variables.',
-    'sql-injection': 'CRITICAL: Use parameterized queries. Never concatenate user input into SQL.',
-    'default': 'Review the issue and consider refactoring this section of code.'
+    // Documentation issues
+    'missing-docstring': {
+        description: 'Add a docstring at the beginning of your function/class to describe what it does.',
+        example: `def calculate_sum(a, b):
+    """Calculate the sum of two numbers.
+
+    Args:
+        a (int): First number
+        b (int): Second number
+
+    Returns:
+        int: Sum of a and b
+    """
+    return a + b`
+    },
+    'missing-module-docstring': {
+        description: 'Add a docstring at the top of your module file.',
+        example: `"""
+This module provides utility functions for data processing.
+
+Author: Your Name
+Date: 2025-01-01
+"""`
+    },
+
+    // Naming issues
+    'invalid-name': {
+        description: 'Use descriptive names following PEP 8 conventions: lowercase_with_underscores for variables and functions, CapitalizedWords for classes.',
+        example: `# Bad
+x = 5
+MyVariable = 10
+
+# Good
+user_count = 5
+max_retry_count = 10
+
+class DataProcessor:  # Class names use CapWords
+    pass`
+    },
+    'bad-whitespace': {
+        description: 'Fix spacing issues around operators and commas.',
+        example: `# Bad
+x=5+3
+my_list=[1,2,3]
+
+# Good
+x = 5 + 3
+my_list = [1, 2, 3]`
+    },
+
+    // Code structure issues
+    'line-too-long': {
+        description: 'Break long lines into multiple lines. Maximum recommended length is 79-100 characters.',
+        example: `# Bad
+result = some_function(argument1, argument2, argument3, argument4, argument5)
+
+# Good
+result = some_function(
+    argument1, argument2,
+    argument3, argument4,
+    argument5
+)`
+    },
+    'trailing-whitespace': {
+        description: 'Remove extra spaces at the end of lines. Most editors can do this automatically.',
+        example: 'Configure your editor to strip trailing whitespace on save.'
+    },
+    'multiple-statements': {
+        description: 'Put each statement on its own line for better readability.',
+        example: `# Bad
+x = 5; y = 10; print(x)
+
+# Good
+x = 5
+y = 10
+print(x)`
+    },
+
+    // Variable issues
+    'unused-variable': {
+        description: 'Remove unused variables or use them in your code. If intentionally unused, prefix with underscore.',
+        example: `# Bad
+def calculate(x, y):
+    result = x + y
+    temp = x * y  # unused
+    return result
+
+# Good
+def calculate(x, y):
+    result = x + y
+    return result
+
+# If needed for unpacking
+data = get_data()
+x, _unused = data  # Use _ prefix`
+    },
+    'undefined-variable': {
+        description: 'Make sure the variable is defined before using it. Check for typos in variable names.',
+        example: `# Bad
+def process():
+    print(value)  # value not defined
+
+# Good
+def process():
+    value = 10
+    print(value)`
+    },
+    'unused-import': {
+        description: 'Remove unused imports or use them in your code.',
+        example: `# Bad
+import os
+import sys  # unused
+
+# Good
+import os`
+    },
+
+    // Logic issues
+    'consider-using-enumerate': {
+        description: 'Use enumerate() when you need both index and value in a loop.',
+        example: `# Bad
+for i in range(len(items)):
+    print(i, items[i])
+
+# Good
+for i, item in enumerate(items):
+    print(i, item)`
+    },
+    'consider-using-with': {
+        description: 'Use "with" statement for proper resource management (files, connections, etc.).',
+        example: `# Bad
+file = open('data.txt', 'r')
+content = file.read()
+file.close()
+
+# Good
+with open('data.txt', 'r') as file:
+    content = file.read()`
+    },
+    'simplifiable-if-statement': {
+        description: 'Simplify if-else statements that return boolean values.',
+        example: `# Bad
+if condition:
+    return True
+else:
+    return False
+
+# Good
+return condition`
+    },
+
+    // Security issues (Bandit)
+    'B105': {
+        description: 'CRITICAL: Hardcoded password detected! Never store passwords in code. Use environment variables or secure vaults.',
+        example: `# Bad
+password = "mysecretpass123"
+
+# Good
+import os
+password = os.environ.get('DB_PASSWORD')
+
+# Or use python-dotenv
+from dotenv import load_dotenv
+load_env()
+password = os.getenv('DB_PASSWORD')`
+    },
+    'B106': {
+        description: 'CRITICAL: Hardcoded password in function argument. Use configuration or environment variables.',
+        example: `# Bad
+def connect_db(password="default123"):
+    pass
+
+# Good
+def connect_db(password=None):
+    password = password or os.environ.get('DB_PASSWORD')`
+    },
+    'B201': {
+        description: 'SECURITY WARNING: Using flask with debug=True is dangerous in production. Debug mode can expose sensitive information.',
+        example: `# Bad
+app.run(debug=True)
+
+# Good
+debug_mode = os.environ.get('FLASK_ENV') == 'development'
+app.run(debug=debug_mode)`
+    },
+    'B608': {
+        description: 'SQL INJECTION RISK: Use parameterized queries instead of string formatting.',
+        example: `# Bad
+query = f"SELECT * FROM users WHERE id = {user_id}"
+cursor.execute(query)
+
+# Good - Using parameterized query
+query = "SELECT * FROM users WHERE id = ?"
+cursor.execute(query, (user_id,))
+
+# Or with SQLAlchemy
+query = select(User).where(User.id == user_id)`
+    },
+    'B301': {
+        description: 'Avoid using pickle - it can execute arbitrary code. Use JSON for data serialization when possible.',
+        example: `# Bad
+import pickle
+data = pickle.loads(untrusted_data)
+
+# Good
+import json
+data = json.loads(trusted_data)
+
+# Or use safer alternatives like msgpack`
+    },
+    'B303': {
+        description: 'Using MD5 or SHA1 for security purposes is insecure. Use SHA256 or better.',
+        example: `# Bad
+import hashlib
+hash = hashlib.md5(data).hexdigest()
+
+# Good
+import hashlib
+hash = hashlib.sha256(data).hexdigest()
+
+# For passwords, use proper password hashing
+from werkzeug.security import generate_password_hash
+hashed = generate_password_hash(password)`
+    },
+    'B602': {
+        description: 'Shell injection risk when using shell=True. Avoid shell=True or sanitize inputs carefully.',
+        example: `# Bad
+subprocess.call(f"echo {user_input}", shell=True)
+
+# Good
+subprocess.call(["echo", user_input])  # No shell=True`
+    },
+
+    // Default
+    'default': {
+        description: 'Review this issue carefully and consider refactoring this section of code. Check the official documentation for best practices.',
+        example: null
+    }
 };
 
 function getSuggestion(issueSymbol) {
-    return fixSuggestions[issueSymbol] || fixSuggestions['default'];
+    const suggestion = fixSuggestions[issueSymbol] || fixSuggestions['default'];
+    return typeof suggestion === 'string' ? { description: suggestion, example: null } : suggestion;
 }
 
 // Toggle details function
@@ -166,9 +396,10 @@ function displayIssues(analysis) {
 
     // Security issues
     if (analysis.security_issues && analysis.security_issues.length > 0) {
-        issuesList.innerHTML += '<h6 class="text-danger mt-3">Security Issues:</h6>';
+        issuesList.innerHTML += '<h6 class="text-danger mt-3"><i class="bi bi-shield-exclamation me-2"></i>Security Issues:</h6>';
         analysis.security_issues.forEach((issue, index) => {
             const issueId = `security-${index}`;
+            const suggestion = getSuggestion(issue.test_id || 'default');
             issuesList.innerHTML += `
                 <div class="alert alert-danger mb-2">
                     <span class="issue-badge severity-${issue.issue_severity}">${issue.issue_severity}</span>
@@ -177,12 +408,16 @@ function displayIssues(analysis) {
                     <strong>Line ${issue.line_number}:</strong> ${issue.issue_text}
                     <br>
                     <button class="btn btn-sm btn-outline-danger mt-2" onclick="toggleDetails('${issueId}')">
-                        <span id="${issueId}-icon">▶</span> Show Details
+                        <span id="${issueId}-icon">▶</span> How to Fix
                     </button>
                     <div id="${issueId}" class="issue-details mt-2" style="display: none;">
                         <hr>
                         <strong>💡 How to Fix:</strong>
-                        <p class="mb-0">${getSuggestion(issue.test_id || 'default')}</p>
+                        <p>${suggestion.description}</p>
+                        ${suggestion.example ? `
+                        <strong>📝 Example:</strong>
+                        <pre class="bg-dark text-light p-3 rounded"><code>${suggestion.example}</code></pre>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -191,34 +426,49 @@ function displayIssues(analysis) {
 
     // Quality issues
     if (analysis.quality_issues && analysis.quality_issues.length > 0) {
-        issuesList.innerHTML += '<h6 class="text-primary mt-3">Code Quality Issues:</h6>';
-        
+        issuesList.innerHTML += '<h6 class="text-primary mt-3"><i class="bi bi-code-square me-2"></i>Code Quality Issues:</h6>';
+
         const displayIssues = analysis.quality_issues.slice(0, 10);
-        
+
         displayIssues.forEach((issue, index) => {
             const issueId = `quality-${index}`;
             const alertClass = issue.type === 'error' ? 'danger' : issue.type === 'warning' ? 'warning' : 'info';
-            
+            const suggestion = getSuggestion(issue.symbol || 'default');
+
             issuesList.innerHTML += `
                 <div class="alert alert-${alertClass} mb-2">
-                    <strong>Line ${issue.line}:</strong> ${issue.message}
-                    <br>
-                    <small class="text-muted">Type: ${issue.symbol}</small>
-                    <br>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>Line ${issue.line}:</strong> ${issue.message}
+                            <br>
+                            <small class="text-muted"><i class="bi bi-tag me-1"></i>${issue.symbol}</small>
+                        </div>
+                        <span class="badge bg-${alertClass === 'danger' ? 'danger' : alertClass === 'warning' ? 'warning' : 'info'}">${issue.type}</span>
+                    </div>
                     <button class="btn btn-sm btn-outline-secondary mt-2" onclick="toggleDetails('${issueId}')">
                         <span id="${issueId}-icon">▶</span> How to Fix
                     </button>
                     <div id="${issueId}" class="issue-details mt-2" style="display: none;">
                         <hr>
-                        <strong>💡 Suggestion:</strong>
-                        <p class="mb-0">${getSuggestion(issue.symbol || 'default')}</p>
+                        <strong>💡 How to Fix:</strong>
+                        <p>${suggestion.description}</p>
+                        ${suggestion.example ? `
+                        <strong>📝 Example:</strong>
+                        <pre class="bg-dark text-light p-3 rounded"><code>${suggestion.example}</code></pre>
+                        ` : ''}
                     </div>
                 </div>
             `;
         });
-        
+
         if (analysis.quality_issues.length > 10) {
-            issuesList.innerHTML += `<p class="text-muted"><small>... and ${analysis.quality_issues.length - 10} more issues</small></p>`;
+            issuesList.innerHTML += `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>${analysis.quality_issues.length - 10} more issues found.</strong>
+                    Showing top 10 issues. Fix these first and re-analyze for best results.
+                </div>
+            `;
         }
     }
 
@@ -413,12 +663,11 @@ async function loadHistory() {
     try {
         const response = await fetch('/api/history');
         const data = await response.json();
-        
-        const historyCard = document.getElementById('historyCard');
-        if (data && data.length > 0 && historyCard) {
-            historyCard.style.display = 'block';
-            const historyList = document.getElementById('historyList');
-            
+
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+
+        if (data && data.length > 0) {
             historyList.innerHTML = data.map(item => `
                 <div class="alert alert-secondary mb-2">
                     <div class="d-flex justify-content-between align-items-center">
@@ -432,14 +681,20 @@ async function loadHistory() {
                                 ${item.score}
                             </span>
                             <br>
-                            <small>Issues: ${item.total_issues}</small>
+                            <small>Issues: ${item.total_issues} | Security: ${item.security_issues}</small>
                         </div>
                     </div>
                 </div>
             `).join('');
+        } else {
+            historyList.innerHTML = '<p class="text-muted text-center">No analysis history yet. Upload a file to get started!</p>';
         }
     } catch (error) {
         console.error('Failed to load history:', error);
+        const historyList = document.getElementById('historyList');
+        if (historyList) {
+            historyList.innerHTML = '<p class="text-danger text-center">Failed to load history. Please try again.</p>';
+        }
     }
 }
 
@@ -511,26 +766,191 @@ document.addEventListener('DOMContentLoaded', () => {
 // Update dashboard statistics
 async function updateDashboardStats() {
     try {
-        const response = await fetch('/api/history');
+        const response = await fetch('/api/stats');
         const data = await response.json();
 
-        if (data && data.length > 0) {
-            // Total analyses
-            document.getElementById('dashTotalAnalyses').textContent = data.length;
+        if (data) {
+            // Update stat cards
+            document.getElementById('dashTotalAnalyses').textContent = data.total_analyses;
+            document.getElementById('dashAvgScore').textContent = data.avg_score || '--';
+            document.getElementById('dashSecurityIssues').textContent = data.total_security_issues;
+            document.getElementById('dashQualityIssues').textContent = data.total_quality_issues;
 
-            // Average score
-            const avgScore = Math.round(data.reduce((sum, item) => sum + item.score, 0) / data.length);
-            document.getElementById('dashAvgScore').textContent = avgScore;
-
-            // Total security issues
-            const totalSecurity = data.reduce((sum, item) => sum + item.security_issues, 0);
-            document.getElementById('dashSecurityIssues').textContent = totalSecurity;
-
-            // Total quality issues
-            const totalQuality = data.reduce((sum, item) => sum + item.total_issues, 0);
-            document.getElementById('dashQualityIssues').textContent = totalQuality;
+            // Create trend charts if we have data
+            if (data.trend_data && data.trend_data.length > 0) {
+                createDashboardTrendCharts(data.trend_data);
+            } else {
+                // Show "no data" message in charts
+                showNoDataMessage('scoreTrendChart', 'No trend data available yet');
+                showNoDataMessage('issuesTrendChart', 'No trend data available yet');
+            }
         }
     } catch (error) {
         console.error('Failed to update dashboard stats:', error);
+    }
+}
+
+// Create dashboard trend charts
+function createDashboardTrendCharts(trendData) {
+    // Destroy existing charts if they exist
+    if (window.scoreTrendChart && typeof window.scoreTrendChart.destroy === 'function') {
+        window.scoreTrendChart.destroy();
+    }
+    if (window.issuesTrendChart && typeof window.issuesTrendChart.destroy === 'function') {
+        window.issuesTrendChart.destroy();
+    }
+
+    // Prepare labels (shortened filenames or indices)
+    const labels = trendData.map((item, index) => `#${index + 1}`);
+    const scores = trendData.map(item => item.score);
+    const qualityIssues = trendData.map(item => item.total_issues);
+    const securityIssues = trendData.map(item => item.security_issues);
+    const complexityIssues = trendData.map(item => item.complexity_issues);
+
+    // Score Trend Chart (Line Chart)
+    const scoreTrendCtx = document.getElementById('scoreTrendChart');
+    if (scoreTrendCtx) {
+        window.scoreTrendChart = new Chart(scoreTrendCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Quality Score',
+                    data: scores,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                return trendData[index].filename;
+                            },
+                            label: function(context) {
+                                return `Score: ${context.parsed.y}/100`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20
+                        },
+                        title: {
+                            display: true,
+                            text: 'Score (0-100)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Recent Analyses'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Issues Trend Chart (Stacked Bar Chart)
+    const issuesTrendCtx = document.getElementById('issuesTrendChart');
+    if (issuesTrendCtx) {
+        window.issuesTrendChart = new Chart(issuesTrendCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Quality Issues',
+                        data: qualityIssues,
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Security Issues',
+                        data: securityIssues,
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Complexity Issues',
+                        data: complexityIssues,
+                        backgroundColor: 'rgba(255, 206, 86, 0.8)',
+                        borderColor: 'rgb(255, 206, 86)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                return trendData[index].filename;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Recent Analyses'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Issues'
+                        },
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Show "no data" message in chart canvas
+function showNoDataMessage(canvasId, message) {
+    const canvas = document.getElementById(canvasId);
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
     }
 }
