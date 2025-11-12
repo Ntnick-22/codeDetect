@@ -37,10 +37,35 @@ services:
       retries: 3
       start_period: 40s
 
+  # Grafana for monitoring (DevOps best practice)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: codedetect-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Change this in production!
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
+      - GF_SERVER_ROOT_URL=http://codedetect.nt-nick.link:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    restart: unless-stopped
+    networks:
+      - codedetect-network
+    depends_on:
+      - codedetect
+
 networks:
   codedetect-network:
     driver: bridge
 
-# NOTE: We no longer use Docker volumes (codedetect-data, codedetect-uploads)
+volumes:
+  grafana-data:
+    driver: local
+
+# NOTE: We no longer use Docker volumes for app data (codedetect-data, codedetect-uploads)
 # because those are local to each instance. Instead, we mount EFS directly.
 # EFS provides shared storage that all instances can access simultaneously.
+# Grafana data uses local volume since it's only for monitoring display.
