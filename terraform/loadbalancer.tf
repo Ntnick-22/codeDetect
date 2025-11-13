@@ -114,7 +114,7 @@ resource "aws_lb" "main" {
 # ----------------------------------------------------------------------------
 
 resource "aws_lb_target_group" "app" {
-  name     = "${local.name_prefix}-tg"
+  name     = "${local.name_prefix}-tg-v2"  # Changed name to force new resource
   port     = 80  # Changed from 5000 to 80 (Nginx reverse proxy)
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
@@ -135,10 +135,15 @@ resource "aws_lb_target_group" "app" {
   # Deregistration delay - wait before removing instance
   deregistration_delay = 30
 
+  # Lifecycle: create new target group before destroying old one
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = merge(
     local.common_tags,
     {
-      Name = "${local.name_prefix}-target-group"
+      Name = "${local.name_prefix}-target-group-v2"
     }
   )
 }
