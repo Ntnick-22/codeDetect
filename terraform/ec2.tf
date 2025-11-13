@@ -88,33 +88,20 @@ locals {
     echo "EFS mounted successfully at /mnt/efs" >> /var/log/codedetect-deploy.log
     # ========================================================================
 
-    # Install Nginx (reverse proxy for port 80 -> 5000)
-    amazon-linux-extras install -y nginx1
-
-    # Configure Nginx
-    cat > /etc/nginx/conf.d/codedetect.conf <<'NGINX_EOF'
-server {
-    listen 80;
-    server_name codedetect.nt-nick.link;
-
-    client_max_body_size 10M;
-
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-NGINX_EOF
-
-    # Start and enable Nginx
-    systemctl start nginx
-    systemctl enable nginx
+    # ========================================================================
+    # OLD NGINX INSTALLATION REMOVED
+    # ========================================================================
+    # We now use Nginx as a Docker container (in docker-compose.yml)
+    # This provides:
+    # - Version control (Nginx config in Git)
+    # - Easier updates (just restart container)
+    # - Consistent environments (dev/prod identical)
+    # - Industry standard (containerized reverse proxy)
+    #
+    # The Nginx container (nginx:alpine) routes traffic:
+    # - /grafana/* → Grafana container (port 3000)
+    # - /*         → CodeDetect app (port 5000)
+    # ========================================================================
 
     # Create app directory
     mkdir -p /home/ec2-user/app

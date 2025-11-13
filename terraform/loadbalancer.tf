@@ -72,14 +72,14 @@ resource "aws_vpc_security_group_egress_rule" "alb_all" {
 # UPDATE EC2 SECURITY GROUP - Allow traffic from ALB
 # ----------------------------------------------------------------------------
 
-# Allow traffic from ALB to EC2 on port 5000
+# Allow traffic from ALB to EC2 on port 80 (Nginx reverse proxy)
 resource "aws_vpc_security_group_ingress_rule" "ec2_from_alb" {
   security_group_id = aws_security_group.ec2.id
-  description       = "Allow traffic from ALB"
+  description       = "Allow traffic from ALB to Nginx"
 
   referenced_security_group_id = aws_security_group.alb.id
-  from_port                    = 5000
-  to_port                      = 5000
+  from_port                    = 80
+  to_port                      = 80
   ip_protocol                  = "tcp"
 
   tags = {
@@ -115,18 +115,19 @@ resource "aws_lb" "main" {
 
 resource "aws_lb_target_group" "app" {
   name     = "${local.name_prefix}-tg"
-  port     = 5000
+  port     = 80  # Changed from 5000 to 80 (Nginx reverse proxy)
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
   # Health check configuration
+  # ALB checks Nginx on port 80, which forwards to Flask app
   health_check {
     enabled             = true
     healthy_threshold   = 2   # 2 successful checks = healthy
     unhealthy_threshold = 3   # 3 failed checks = unhealthy
     timeout             = 5   # 5 seconds to respond
     interval            = 30  # Check every 30 seconds
-    path                = "/api/health"
+    path                = "/api/health"  # Nginx forwards to codedetect:5000/api/health
     protocol            = "HTTP"
     matcher             = "200" # Expect HTTP 200 response
   }

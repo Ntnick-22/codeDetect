@@ -70,35 +70,25 @@ resource "aws_vpc_security_group_ingress_rule" "https" {
   }
 }
 
-# Application Port (5000) - Flask application
-resource "aws_vpc_security_group_ingress_rule" "app" {
-  security_group_id = aws_security_group.ec2.id
-  description       = "Application port for Flask/CodeDetect"
-
-  from_port   = var.app_port # 5000
-  to_port     = var.app_port
-  ip_protocol = "tcp"
-  cidr_ipv4   = "0.0.0.0/0" # Allow from anywhere
-
-  tags = {
-    Name = "Application Port"
-  }
-}
-
-# Grafana Port (3000) - Monitoring dashboard
-resource "aws_vpc_security_group_ingress_rule" "grafana" {
-  security_group_id = aws_security_group.ec2.id
-  description       = "Grafana monitoring dashboard"
-
-  from_port   = 3000
-  to_port     = 3000
-  ip_protocol = "tcp"
-  cidr_ipv4   = "0.0.0.0/0" # Allow from anywhere
-
-  tags = {
-    Name = "Grafana Port"
-  }
-}
+# ============================================================================
+# PORTS 3000 AND 5000 REMOVED
+# ============================================================================
+# With Nginx reverse proxy, we no longer need to expose ports 3000 and 5000
+# All traffic goes through port 80 (HTTP) and 443 (HTTPS)
+#
+# Architecture:
+#   Internet → ALB (80/443) → EC2 (80) → Nginx → Services
+#
+# OLD (Direct Access):
+#   - Port 5000: Flask app (exposed)
+#   - Port 3000: Grafana (exposed)
+#   ❌ Security risk: Services directly accessible
+#
+# NEW (Reverse Proxy):
+#   - Port 80: Nginx (all traffic)
+#   - Nginx routes to internal services
+#   ✅ More secure: Services not exposed to internet
+# ============================================================================
 
 # Optional: Webhook Port (8000) - If using webhook deployment
 # Uncomment if you switch back to webhook-based deployment
