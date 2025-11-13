@@ -89,6 +89,10 @@ services:
       # NEW: Configure Grafana to work behind reverse proxy
       - GF_SERVER_ROOT_URL=https://codedetect.nt-nick.link/grafana
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      # Tell Grafana it's behind a proxy (fixes "data breach" error)
+      - GF_SERVER_ENFORCE_DOMAIN=false
+      - GF_SECURITY_COOKIE_SECURE=false
+      - GF_SECURITY_COOKIE_SAMESITE=lax
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
