@@ -1,46 +1,15 @@
 services:
   # =========================================================================
-  # NGINX REVERSE PROXY (Industry Standard)
-  # =========================================================================
-  # Single entry point for all services
-  # Routes traffic to appropriate backend based on URL path
-  # - /grafana/* → Grafana monitoring
-  # - /*         → CodeDetect application
-  nginx:
-    image: nginx:alpine
-    container_name: codedetect-nginx
-    ports:
-      - "80:80"  # ALB forwards HTTP traffic here
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    restart: unless-stopped
-    networks:
-      - codedetect-network
-    depends_on:
-      - codedetect
-      - grafana
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # =========================================================================
   # CODEDETECT APPLICATION
   # =========================================================================
-  # Main application (no longer exposed directly to internet)
-  # Accessible only through Nginx reverse proxy
   codedetect:
     image: codedetect-app:latest
     build:
       context: .
       dockerfile: Dockerfile
     container_name: codedetect-app
-    # Port 5000 is INTERNAL ONLY (not exposed to host)
-    # Traffic comes through Nginx on port 80
-    expose:
-      - "5000"
+    ports:
+      - "80:5000"  # ALB forwards to port 80, Flask app runs on 5000
     environment:
       - DATABASE_URL=sqlite:////app/instance/codedetect.db
       - FLASK_ENV=production
@@ -60,9 +29,7 @@ services:
       # All uploaded files are accessible from both instances
       - /mnt/efs/uploads:/app/uploads
     restart: unless-stopped
-    networks:
-      - codedetect-network
-    # Health check for internal monitoring
+    # Health check for ALB
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
@@ -70,45 +37,5 @@ services:
       retries: 3
       start_period: 40s
 
-  # =========================================================================
-  # GRAFANA MONITORING (DevOps Best Practice)
-  # =========================================================================
-  # Accessible via reverse proxy at /grafana path
-  # No longer exposed directly to internet
-  grafana:
-    image: grafana/grafana:latest
-    container_name: codedetect-grafana
-    # Port 3000 is INTERNAL ONLY (not exposed to host)
-    # Traffic comes through Nginx at /grafana path
-    expose:
-      - "3000"
-    environment:
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
-      # NEW: Configure Grafana to work behind reverse proxy
-      - GF_SERVER_ROOT_URL=https://codedetect.nt-nick.link/grafana
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      # Tell Grafana it's behind a proxy (fixes "data breach" error)
-      - GF_SERVER_ENFORCE_DOMAIN=false
-      - GF_SECURITY_COOKIE_SECURE=false
-      - GF_SECURITY_COOKIE_SAMESITE=lax
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    restart: unless-stopped
-    networks:
-      - codedetect-network
-    depends_on:
-      - codedetect
-
-networks:
-  codedetect-network:
-    driver: bridge
-
-volumes:
-  grafana-data:
-    driver: local
-
-# NOTE: We no longer use Docker volumes for app data (codedetect-data, codedetect-uploads)
-# because those are local to each instance. Instead, we mount EFS directly.
-# EFS provides shared storage that all instances can access simultaneously.
-# Grafana data uses local volume since it's only for monitoring display.
+# NOTE: We use EFS for persistent data (database and uploads)
+# EFS provides shared storage that all instances can access simultaneously
