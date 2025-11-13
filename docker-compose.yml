@@ -84,7 +84,7 @@ services:
       - "3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin  # Change this in production!
+      - GF_SECURITY_ADMIN_PASSWORD=admin123  # Changed password for reset
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
       # NEW: Configure Grafana to work behind reverse proxy
       - GF_SERVER_ROOT_URL=https://codedetect.nt-nick.link/grafana
