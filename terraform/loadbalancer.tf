@@ -135,6 +135,15 @@ resource "aws_lb_target_group" "app" {
   # Deregistration delay - wait before removing instance
   deregistration_delay = 30
 
+  # Sticky sessions - CRITICAL for Grafana to work behind load balancer
+  # Routes requests from same user to same EC2 instance
+  # This ensures Grafana sessions persist (each instance has own Grafana DB)
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 86400  # 24 hours
+    enabled         = true
+  }
+
   # Lifecycle: create new target group before destroying old one
   lifecycle {
     create_before_destroy = true
