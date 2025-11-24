@@ -208,15 +208,28 @@ jobs:
 
           # Plan the deployment
           echo "📋 Running Terraform plan..."
-          terraform plan \
+          if ! terraform plan \
             -var="active_environment=$TARGET_ENV" \
             -var="docker_tag=$DOCKER_TAG" \
-            -out=tfplan
+            -out=tfplan; then
+            echo "❌ Terraform plan failed!"
+            echo "Showing detailed error logs..."
+            terraform plan \
+              -var="active_environment=$TARGET_ENV" \
+              -var="docker_tag=$DOCKER_TAG" \
+              -no-color
+            exit 1
+          fi
 
           # Apply the deployment
           echo ""
           echo "🚀 Applying Terraform changes..."
-          terraform apply -auto-approve tfplan
+          if ! terraform apply -auto-approve tfplan; then
+            echo "❌ Terraform apply failed!"
+            echo "Showing Terraform state..."
+            terraform show
+            exit 1
+          fi
 
           echo ""
           echo "✅ Terraform apply completed!"
