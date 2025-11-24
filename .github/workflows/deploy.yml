@@ -165,25 +165,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Determine Target Environment
-        id: target_env
-        run: |
-          # If manual trigger, use specified environment
-          if [ "${{ github.event.inputs.deploy_environment }}" != "" ]; then
-            TARGET="${{ github.event.inputs.deploy_environment }}"
-          else
-            # Auto-determine: Get current active environment, deploy to the other one
-            CURRENT=$(terraform -chdir=terraform output -raw active_environment 2>/dev/null || echo "blue")
-            if [ "$CURRENT" = "blue" ]; then
-              TARGET="green"
-            else
-              TARGET="blue"
-            fi
-          fi
-
-          echo "target=$TARGET" >> $GITHUB_OUTPUT
-          echo "🎯 Target environment: $TARGET"
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -193,6 +174,28 @@ jobs:
         run: |
           cd terraform
           terraform init
+
+      - name: Determine Target Environment
+        id: target_env
+        run: |
+          cd terraform
+
+          # If manual trigger, use specified environment
+          if [ "${{ github.event.inputs.deploy_environment }}" != "" ]; then
+            TARGET="${{ github.event.inputs.deploy_environment }}"
+          else
+            # Auto-determine: Get current active environment, deploy to the other one
+            CURRENT=$(terraform output -raw active_environment 2>/dev/null || echo "green")
+            echo "Current active environment: $CURRENT"
+            if [ "$CURRENT" = "blue" ]; then
+              TARGET="green"
+            else
+              TARGET="blue"
+            fi
+          fi
+
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "🎯 Target environment: $TARGET"
 
       - name: Blue/Green Deployment
         run: |
