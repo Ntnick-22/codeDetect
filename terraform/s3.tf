@@ -8,7 +8,8 @@
 # S3 BUCKET
 # ----------------------------------------------------------------------------
 resource "aws_s3_bucket" "uploads" {
-  bucket = var.s3_bucket_name # Must be globally unique
+  bucket        = var.s3_bucket_name # Must be globally unique
+  force_destroy = true               # Allow deletion even if bucket has files
 
   tags = merge(
     local.common_tags,
