@@ -13,6 +13,7 @@
 # Request a free SSL certificate from AWS Certificate Manager
 
 resource "aws_acm_certificate" "main" {
+  count             = var.enable_dns ? 1 : 0  # Only create if DNS enabled
   domain_name       = "${var.subdomain}.${var.domain_name}"  # codedetect.nt-nick.link
   validation_method = "DNS"                                   # Verify ownership via Route53
 
@@ -40,20 +41,20 @@ resource "aws_acm_certificate" "main" {
 # We automatically add it to Route53
 
 resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+  for_each = var.enable_dns ? {
+    for dvo in aws_acm_certificate.main[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-  }
+  } : {}
 
   allow_overwrite = true
   name            = each.value.name
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = data.aws_route53_zone.main.zone_id
+  zone_id         = data.aws_route53_zone.main[0].zone_id
 }
 
 # ----------------------------------------------------------------------------
@@ -62,7 +63,8 @@ resource "aws_route53_record" "cert_validation" {
 # Terraform waits here until AWS validates the certificate (usually 5-10 min)
 
 resource "aws_acm_certificate_validation" "main" {
-  certificate_arn         = aws_acm_certificate.main.arn
+  count                   = var.enable_dns ? 1 : 0
+  certificate_arn         = aws_acm_certificate.main[0].arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 
   timeouts {
@@ -76,6 +78,7 @@ resource "aws_acm_certificate_validation" "main" {
 # Add HTTPS listener to the Application Load Balancer
 
 resource "aws_lb_listener" "https" {
+  count             = var.enable_dns ? 1 : 0  # Only create if DNS enabled
   load_balancer_arn = aws_lb.main.arn
   port              = "443"
   protocol          = "HTTPS"
@@ -85,7 +88,7 @@ resource "aws_lb_listener" "https" {
   ssl_policy        = "ELBSecurityPolicy-2016-08"
 
   # Attach our SSL certificate
-  certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
+  certificate_arn   = aws_acm_certificate_validation.main[0].certificate_arn
 
   # Blue/Green Deployment: Forward traffic to active environment
   # This uses the active_environment variable to determine which target group receives traffic

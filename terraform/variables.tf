@@ -212,11 +212,22 @@ variable "s3_enable_versioning" {
 # DOMAIN CONFIGURATION
 # ----------------------------------------------------------------------------
 
+# Enable DNS configuration (set to false if Route53 zone doesn't exist)
+variable "enable_dns" {
+  description = "Enable Route53 DNS configuration"
+  type        = bool
+  default     = false  # Disabled by default to avoid errors
+
+  # Set to true only if:
+  # 1. You have a Route53 hosted zone
+  # 2. You want Terraform to manage DNS records
+}
+
 # Your domain name
 variable "domain_name" {
   description = "nt-nick.link"
   type        = string
-  default     = "example.com" # CHANGE THIS to your actual domain!
+  default     = "nt-nick.link"
 
   # Example: "yourdomain.com"
 }

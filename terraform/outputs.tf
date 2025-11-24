@@ -79,7 +79,7 @@ output "app_url_with_port" {
 
 output "route53_nameservers" {
   description = "Nameservers for your Route 53 hosted zone"
-  value       = data.aws_route53_zone.main.name_servers
+  value       = var.enable_dns ? data.aws_route53_zone.main[0].name_servers : []
 }
 
 # ----------------------------------------------------------------------------

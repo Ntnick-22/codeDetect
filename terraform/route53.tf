@@ -5,25 +5,27 @@
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# GET EXISTING HOSTED ZONE
+# GET EXISTING HOSTED ZONE (Optional - only if enable_dns = true)
 # ----------------------------------------------------------------------------
 # You already own nt-nick.link, so we just reference it
 # Don't create a new one - just get the existing one
 
 data "aws_route53_zone" "main" {
+  count        = var.enable_dns ? 1 : 0  # Only lookup if DNS enabled
   name         = var.domain_name # "nt-nick.link"
   private_zone = false           # Public hosted zone (accessible from internet)
 }
 
 # ----------------------------------------------------------------------------
-# CREATE DNS RECORD - Points to Load Balancer
+# CREATE DNS RECORD - Points to Load Balancer (Optional)
 # ----------------------------------------------------------------------------
 # Points your subdomain (codedetect.nt-nick.link) to Application Load Balancer
 # Using ALIAS record (AWS-specific) instead of regular A record
 # Benefits: Free, better health checks, automatic IP updates
 
 resource "aws_route53_record" "app" {
-  zone_id = data.aws_route53_zone.main.zone_id
+  count   = var.enable_dns ? 1 : 0  # Only create if DNS enabled
+  zone_id = data.aws_route53_zone.main[0].zone_id
   name    = var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
   type    = "A"
 
