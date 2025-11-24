@@ -96,6 +96,10 @@ locals {
   # Example: "codedetect-prod-vpc"
   name_prefix = "${local.app_name}-${var.environment}"
 
+  # Blue/Green deployment - Active Auto Scaling Group name
+  # This automatically selects the correct ASG based on active_environment variable
+  active_asg_name = var.active_environment == "blue" ? "${local.name_prefix}-blue-asg" : "${local.name_prefix}-green-asg"
+
   # Common tags to apply to all resources
   common_tags = {
     Application = local.app_name

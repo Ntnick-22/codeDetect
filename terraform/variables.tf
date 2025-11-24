@@ -31,6 +31,18 @@ variable "environment" {
   }
 }
 
+# Active environment for blue/green deployment
+variable "active_environment" {
+  description = "Active environment for blue/green deployment (blue or green)"
+  type        = string
+  default     = "blue"
+
+  validation {
+    condition     = contains(["blue", "green"], var.active_environment)
+    error_message = "Active environment must be either 'blue' or 'green'"
+  }
+}
+
 # Your email address (for tagging and notifications)
 variable "owner_email" {
   description = "Email address of the project owner"
@@ -221,14 +233,24 @@ variable "subdomain" {
 # APPLICATION CONFIGURATION
 # ----------------------------------------------------------------------------
 
-# Docker image to deploy
-variable "docker_image" {
-  description = "Docker image name and tag"
+# Docker image repository (username/repo)
+variable "docker_image_repo" {
+  description = "Docker Hub repository (username/imagename)"
   type        = string
-  default     = "codedetect:latest"
+  default     = "nyeinthunaing/codedetect"
 
-  # Will use local Docker image initially
-  # Later can use ECR (AWS container registry)
+  # Docker Hub repository for pulling images
+}
+
+# Docker image tag (version)
+variable "docker_tag" {
+  description = "Docker image tag to deploy (e.g., v1.0, v1.1, latest)"
+  type        = string
+  default     = "v1.0"
+
+  # This is the version of your application to deploy
+  # Blue/Green deployments can use different tags
+  # Example: Blue runs v1.0, Green runs v1.1
 }
 
 # Application port

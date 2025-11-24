@@ -88,7 +88,7 @@ output "route53_nameservers" {
 
 output "ssh_connection_command" {
   description = "Command to SSH into EC2 instances (use instance IPs from AWS Console)"
-  value       = "aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${aws_autoscaling_group.app.name}' --query 'Reservations[*].Instances[*].[InstanceId,PublicIpAddress,State.Name]' --output table"
+  value       = "aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${local.active_asg_name}' --query 'Reservations[*].Instances[*].[InstanceId,PublicIpAddress,State.Name]' --output table"
 }
 
 output "ssh_key_name" {
@@ -111,16 +111,16 @@ output "deployment_commands" {
 
     # 2. Trigger instance refresh (zero-downtime rolling update)
     aws autoscaling start-instance-refresh \
-      --auto-scaling-group-name ${aws_autoscaling_group.app.name} \
+      --auto-scaling-group-name ${local.active_asg_name} \
       --preferences MinHealthyPercentage=50
 
     # 3. Monitor refresh status
     aws autoscaling describe-instance-refreshes \
-      --auto-scaling-group-name ${aws_autoscaling_group.app.name}
+      --auto-scaling-group-name ${local.active_asg_name}
 
     # Note: Manual SSH deployment not recommended with Auto Scaling
     # If needed for debugging, get instance IPs:
-    # aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${aws_autoscaling_group.app.name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
+    # aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${local.active_asg_name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
     export S3_BUCKET_NAME=${aws_s3_bucket.uploads.id}
     
     # 4. Start application with Docker
@@ -219,16 +219,15 @@ output "cloudwatch_alarms_url" {
   value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#alarmsV2:"
 }
 
-# COMMENTED OUT: Dashboard disabled temporarily for ASG migration
-# output "cloudwatch_dashboard_url" {
-#   description = "Direct link to CloudWatch Dashboard"
-#   value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.main.dashboard_name}"
-# }
+output "cloudwatch_dashboard_url" {
+  description = "Direct link to CloudWatch Dashboard"
+  value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.main.dashboard_name}"
+}
 
-# output "cloudwatch_dashboard_name" {
-#   description = "Name of the CloudWatch dashboard"
-#   value       = aws_cloudwatch_dashboard.main.dashboard_name
-# }
+output "cloudwatch_dashboard_name" {
+  description = "Name of the CloudWatch dashboard"
+  value       = aws_cloudwatch_dashboard.main.dashboard_name
+}
 
 output "monitoring_setup_instructions" {
   description = "Instructions to complete monitoring setup"
@@ -314,7 +313,7 @@ output "next_steps" {
 
     3. CHECK AUTO SCALING GROUP
        Instances: Should have 2+ healthy instances
-       Command: aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${aws_autoscaling_group.app.name}
+       Command: aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names ${local.active_asg_name}
 
     4. TEST YOUR APPLICATION
        HTTPS: https://${var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name}
@@ -325,7 +324,7 @@ output "next_steps" {
        Both instances use same database
 
     6. SSH FOR DEBUGGING (if needed)
-       Get instance IPs: aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${aws_autoscaling_group.app.name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
+       Get instance IPs: aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${local.active_asg_name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
        SSH: ssh -i codedetect-key ec2-user@<INSTANCE_IP>
 
     7. TEST APPLICATION

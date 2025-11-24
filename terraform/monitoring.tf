@@ -95,9 +95,9 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   # Formula: Must be high for (period x evaluation_periods) = 5 minutes
 
   # What to monitor (Auto Scaling Group instead of single instance)
-  # UPDATED: Now monitors Auto Scaling Group
+  # UPDATED: Now monitors Active Auto Scaling Group (blue or green)
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.app.name
+    AutoScalingGroupName = local.active_asg_name
   }
 
   # What to do when alarm triggers
@@ -153,9 +153,9 @@ resource "aws_cloudwatch_metric_alarm" "instance_status_check" {
   period             = 60 # 1 minute
   evaluation_periods = 2  # 2 failures = 2 minutes down
 
-  # UPDATED: Now monitors Auto Scaling Group
+  # UPDATED: Now monitors Active Auto Scaling Group (blue or green)
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.app.name
+    AutoScalingGroupName = local.active_asg_name
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
@@ -203,9 +203,9 @@ resource "aws_cloudwatch_metric_alarm" "high_network_out" {
   period             = 300 # 5 minutes
   evaluation_periods = 1   # Trigger immediately
 
-  # UPDATED: Now monitors Auto Scaling Group
+  # UPDATED: Now monitors Active Auto Scaling Group (blue or green)
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.app.name
+    AutoScalingGroupName = local.active_asg_name
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
@@ -265,18 +265,18 @@ resource "aws_cloudwatch_metric_alarm" "high_network_out" {
 # - Great for troubleshooting incidents
 # - Impressive for interviews/demos
 
-# COMMENTED OUT: Needs update for Auto Scaling Group and ALB metrics
-# Will recreate with ASG-specific dashboard later
-/*
+# ============================================================================
+# CLOUDWATCH DASHBOARD - Production Monitoring
+# ============================================================================
+# Complete monitoring dashboard for Auto Scaling Group, ALB, and EFS
+# Replaces Grafana with native CloudWatch visualization
+
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${local.name_prefix}-monitoring"
 
   # Dashboard body is JSON defining layout and widgets
-  # We use Terraform's jsonencode() to write this cleanly
   dashboard_body = jsonencode({
-    # Dashboard widgets are arranged in a grid
-    # Each widget has: x, y, width, height (in grid units)
-    # Grid is 24 units wide
+    # Dashboard widgets are arranged in a grid (24 units wide)
     widgets = [
       # ===================================================================
       # ROW 1: TITLE AND ALARM STATUS
@@ -290,7 +290,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 24
         height = 1
         properties = {
-          markdown = "# 📊 CodeDetect Infrastructure Monitoring\n**Auto Scaling Group:** ${aws_autoscaling_group.app.name} | **Load Balancer:** ${aws_lb.main.dns_name} | **Region:** ${var.aws_region}\n**EFS:** ${aws_efs_file_system.main.id} | **Database:** Shared on EFS"
+          markdown = "# 📊 CodeDetect Production Monitoring\n**Active Environment:** ${var.active_environment} | **Auto Scaling Group:** ${local.active_asg_name} | **Load Balancer:** ${aws_lb.main.dns_name}\n**Region:** ${var.aws_region} | **EFS:** ${aws_efs_file_system.main.id} | **Database:** Shared on EFS | **Instances:** 2-4"
         }
       },
 
@@ -306,34 +306,36 @@ resource "aws_cloudwatch_dashboard" "main" {
           alarms = [
             aws_cloudwatch_metric_alarm.high_cpu.arn,
             aws_cloudwatch_metric_alarm.instance_status_check.arn,
-            aws_cloudwatch_metric_alarm.high_network_out.arn
+            aws_cloudwatch_metric_alarm.high_network_out.arn,
+            aws_cloudwatch_metric_alarm.blue_cpu_high.arn,
+            aws_cloudwatch_metric_alarm.blue_cpu_low.arn,
+            aws_cloudwatch_metric_alarm.green_cpu_high.arn,
+            aws_cloudwatch_metric_alarm.green_cpu_low.arn
           ]
         }
       },
 
       # ===================================================================
-      # ROW 2: CPU METRICS
+      # ROW 2: AUTO SCALING GROUP - CPU & INSTANCE COUNT
       # ===================================================================
 
-      # Widget 3: CPU Utilization Graph (12 hours)
+      # Widget 3: ASG CPU Utilization Graph
       {
         type   = "metric"
         x      = 0
         y      = 4
-        width  = 18
+        width  = 12
         height = 6
         properties = {
-          title  = "CPU Utilization (%)"
+          title  = "Auto Scaling Group - CPU Utilization"
           region = var.aws_region
-          # Metrics to display: [Namespace, MetricName, DimensionName, DimensionValue]
           metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.main.id, { stat = "Average", label = "Avg CPU", color = "#1f77b4" }],
-            ["...", { stat = "Maximum", label = "Max CPU", color = "#ff7f0e" }]
+            ["AWS/EC2", "CPUUtilization", "AutoScalingGroupName", local.active_asg_name, { stat = "Average", label = "Average CPU", color = "#1f77b4" }],
+            ["...", { stat = "Maximum", label = "Max CPU", color = "#ff7f0e" }],
+            ["...", { stat = "Minimum", label = "Min CPU", color = "#2ca02c" }]
           ]
-          # Time period shown
-          period = 300 # 5-minute intervals
+          period = 300
           stat   = "Average"
-          # Graph appearance
           yAxis = {
             left = {
               min   = 0
@@ -341,18 +343,56 @@ resource "aws_cloudwatch_dashboard" "main" {
               label = "Percentage"
             }
           }
-          # Add horizontal line at alarm threshold
           annotations = {
-            horizontal = [{
-              value = 80
-              label = "Alarm Threshold"
-              color = "#d62728" # Red line
-            }]
+            horizontal = [
+              {
+                value = 80
+                label = "High CPU Alarm"
+                color = "#d62728"
+              },
+              {
+                value = 70
+                label = "Scale Up Threshold"
+                color = "#ff7f0e"
+              },
+              {
+                value = 30
+                label = "Scale Down Threshold"
+                color = "#2ca02c"
+              }
+            ]
           }
         }
       },
 
-      # Widget 4: Current CPU (number display)
+      # Widget 4: Instance Count
+      {
+        type   = "metric"
+        x      = 12
+        y      = 4
+        width  = 6
+        height = 6
+        properties = {
+          title  = "Active Instances"
+          region = var.aws_region
+          metrics = [
+            ["AWS/AutoScaling", "GroupDesiredCapacity", "AutoScalingGroupName", local.active_asg_name, { stat = "Average", label = "Desired", color = "#1f77b4" }],
+            [".", "GroupInServiceInstances", ".", ".", { stat = "Average", label = "In Service", color = "#2ca02c" }],
+            [".", "GroupMinSize", ".", ".", { stat = "Average", label = "Min", color = "#ff7f0e" }],
+            [".", "GroupMaxSize", ".", ".", { stat = "Average", label = "Max", color = "#d62728" }]
+          ]
+          period = 60
+          stat   = "Average"
+          yAxis = {
+            left = {
+              min = 0
+              max = 5
+            }
+          }
+        }
+      },
+
+      # Widget 5: Current CPU (Single Value)
       {
         type   = "metric"
         x      = 18
@@ -360,21 +400,19 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 6
         height = 3
         properties = {
-          title  = "Current CPU"
+          title  = "Current Avg CPU"
           region = var.aws_region
           metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.main.id]
+            ["AWS/EC2", "CPUUtilization", "AutoScalingGroupName", local.active_asg_name, { stat = "Average" }]
           ]
           period = 60
           stat   = "Average"
-          # Display as single number (not graph)
-          view = "singleValue"
-          # Set precision
+          view   = "singleValue"
           setPeriodToTimeRange = true
         }
       },
 
-      # Widget 5: CPU Maximum (number display)
+      # Widget 6: Peak CPU (Single Value)
       {
         type   = "metric"
         x      = 18
@@ -382,22 +420,22 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 6
         height = 3
         properties = {
-          title  = "Peak CPU (Last Hour)"
+          title  = "Peak CPU (1h)"
           region = var.aws_region
           metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.main.id, { stat = "Maximum" }]
+            ["AWS/EC2", "CPUUtilization", "AutoScalingGroupName", local.active_asg_name, { stat = "Maximum" }]
           ]
-          period = 3600 # 1 hour
+          period = 3600
           stat   = "Maximum"
           view   = "singleValue"
         }
       },
 
       # ===================================================================
-      # ROW 3: NETWORK METRICS
+      # ROW 3: APPLICATION LOAD BALANCER METRICS
       # ===================================================================
 
-      # Widget 6: Network In/Out Graph
+      # Widget 7: ALB Request Count & Response Time
       {
         type   = "metric"
         x      = 0
@@ -405,13 +443,116 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title  = "Network Traffic (Bytes)"
+          title  = "Load Balancer - Requests & Latency"
           region = var.aws_region
           metrics = [
-            ["AWS/EC2", "NetworkIn", "InstanceId", aws_instance.main.id, { stat = "Sum", label = "Inbound", color = "#2ca02c" }],
-            [".", "NetworkOut", ".", ".", { stat = "Sum", label = "Outbound", color = "#d62728" }]
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Sum", label = "Requests", yAxis = "left", color = "#1f77b4" }],
+            [".", "TargetResponseTime", ".", ".", { stat = "Average", label = "Response Time (ms)", yAxis = "right", color = "#ff7f0e" }]
           ]
-          period = 300 # 5 minutes
+          period = 300
+          yAxis = {
+            left = {
+              label = "Requests"
+              min   = 0
+            }
+            right = {
+              label = "Milliseconds"
+              min   = 0
+            }
+          }
+        }
+      },
+
+      # Widget 8: ALB HTTP Response Codes
+      {
+        type   = "metric"
+        x      = 12
+        y      = 10
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Load Balancer - HTTP Response Codes"
+          region = var.aws_region
+          metrics = [
+            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Sum", label = "2XX (Success)", color = "#2ca02c" }],
+            [".", "HTTPCode_Target_3XX_Count", ".", ".", { stat = "Sum", label = "3XX (Redirect)", color = "#1f77b4" }],
+            [".", "HTTPCode_Target_4XX_Count", ".", ".", { stat = "Sum", label = "4XX (Client Error)", color = "#ff7f0e" }],
+            [".", "HTTPCode_Target_5XX_Count", ".", ".", { stat = "Sum", label = "5XX (Server Error)", color = "#d62728" }]
+          ]
+          period = 300
+          stat   = "Sum"
+          yAxis = {
+            left = {
+              min = 0
+            }
+          }
+        }
+      },
+
+      # ===================================================================
+      # ROW 4: TARGET HEALTH & CONNECTION METRICS
+      # ===================================================================
+
+      # Widget 9: Healthy/Unhealthy Targets
+      {
+        type   = "metric"
+        x      = 0
+        y      = 16
+        width  = 8
+        height = 6
+        properties = {
+          title  = "Target Health"
+          region = var.aws_region
+          metrics = [
+            ["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", replace(aws_lb_target_group.blue.arn, "/^.*:(targetgroup\\/.*)/", "$1"), "LoadBalancer", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Average", label = "Blue Healthy", color = "#2ca02c" }],
+            [".", "UnHealthyHostCount", ".", replace(aws_lb_target_group.blue.arn, "/^.*:(targetgroup\\/.*)/", "$1"), ".", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Average", label = "Blue Unhealthy", color = "#d62728" }],
+            [".", "HealthyHostCount", ".", replace(aws_lb_target_group.green.arn, "/^.*:(targetgroup\\/.*)/", "$1"), ".", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Average", label = "Green Healthy", color = "#1f77b4" }],
+            [".", "UnHealthyHostCount", ".", replace(aws_lb_target_group.green.arn, "/^.*:(targetgroup\\/.*)/", "$1"), ".", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Average", label = "Green Unhealthy", color = "#ff7f0e" }]
+          ]
+          period = 60
+          stat   = "Average"
+          yAxis = {
+            left = {
+              min = 0
+              max = 4
+            }
+          }
+        }
+      },
+
+      # Widget 10: ALB Connection Count
+      {
+        type   = "metric"
+        x      = 8
+        y      = 16
+        width  = 8
+        height = 6
+        properties = {
+          title  = "Active Connections"
+          region = var.aws_region
+          metrics = [
+            ["AWS/ApplicationELB", "ActiveConnectionCount", "LoadBalancer", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Sum", label = "Active Connections", color = "#1f77b4" }],
+            [".", "NewConnectionCount", ".", ".", { stat = "Sum", label = "New Connections", color = "#2ca02c" }]
+          ]
+          period = 300
+          stat   = "Sum"
+        }
+      },
+
+      # Widget 11: Processed Bytes
+      {
+        type   = "metric"
+        x      = 16
+        y      = 16
+        width  = 8
+        height = 6
+        properties = {
+          title  = "Data Transfer"
+          region = var.aws_region
+          metrics = [
+            ["AWS/ApplicationELB", "ProcessedBytes", "LoadBalancer", replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", ""), { stat = "Sum", label = "Processed Bytes", color = "#1f77b4" }]
+          ]
+          period = 300
           stat   = "Sum"
           yAxis = {
             left = {
@@ -422,81 +563,108 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
 
-      # Widget 7: Network Packets
-      {
-        type   = "metric"
-        x      = 12
-        y      = 10
-        width  = 12
-        height = 6
-        properties = {
-          title  = "Network Packets"
-          region = var.aws_region
-          metrics = [
-            ["AWS/EC2", "NetworkPacketsIn", "InstanceId", aws_instance.main.id, { stat = "Sum", label = "Packets In" }],
-            [".", "NetworkPacketsOut", ".", ".", { stat = "Sum", label = "Packets Out" }]
-          ]
-          period = 300
-          stat   = "Sum"
-        }
-      },
-
       # ===================================================================
-      # ROW 4: STATUS CHECKS
+      # ROW 5: NETWORK METRICS (EC2)
       # ===================================================================
 
-      # Widget 8: Status Check Graph
+      # Widget 12: Network In/Out
       {
         type   = "metric"
         x      = 0
-        y      = 16
+        y      = 22
         width  = 12
         height = 6
         properties = {
-          title  = "Instance Status Checks"
+          title  = "EC2 Network Traffic"
           region = var.aws_region
           metrics = [
-            ["AWS/EC2", "StatusCheckFailed", "InstanceId", aws_instance.main.id, { label = "Any Check Failed", color = "#d62728" }],
-            [".", "StatusCheckFailed_System", ".", ".", { label = "System Check Failed", color = "#ff7f0e" }],
-            [".", "StatusCheckFailed_Instance", ".", ".", { label = "Instance Check Failed", color = "#8c564b" }]
+            ["AWS/EC2", "NetworkIn", "AutoScalingGroupName", local.active_asg_name, { stat = "Sum", label = "Network In", color = "#2ca02c" }],
+            [".", "NetworkOut", ".", ".", { stat = "Sum", label = "Network Out", color = "#d62728" }]
           ]
-          period = 60
-          stat   = "Maximum"
+          period = 300
+          stat   = "Sum"
           yAxis = {
             left = {
+              label = "Bytes"
               min   = 0
-              max   = 1
-              label = "Status (0=OK, 1=Failed)"
             }
           }
         }
       },
 
-      # Widget 9: Disk Operations (if available)
+      # Widget 13: Network Packets
       {
         type   = "metric"
         x      = 12
-        y      = 16
+        y      = 22
         width  = 12
         height = 6
         properties = {
-          title  = "Disk I/O Operations"
+          title  = "EC2 Network Packets"
           region = var.aws_region
           metrics = [
-            ["AWS/EC2", "DiskReadOps", "InstanceId", aws_instance.main.id, { stat = "Sum", label = "Read Ops" }],
-            [".", "DiskWriteOps", ".", ".", { stat = "Sum", label = "Write Ops" }]
+            ["AWS/EC2", "NetworkPacketsIn", "AutoScalingGroupName", local.active_asg_name, { stat = "Sum", label = "Packets In", color = "#2ca02c" }],
+            [".", "NetworkPacketsOut", ".", ".", { stat = "Sum", label = "Packets Out", color = "#d62728" }]
           ]
           period = 300
           stat   = "Sum"
         }
+      },
+
+      # ===================================================================
+      # ROW 6: EFS METRICS
+      # ===================================================================
+
+      # Widget 14: EFS Data Transfer
+      {
+        type   = "metric"
+        x      = 0
+        y      = 28
+        width  = 12
+        height = 6
+        properties = {
+          title  = "EFS - Data Transfer (Shared Database & Uploads)"
+          region = var.aws_region
+          metrics = [
+            ["AWS/EFS", "DataReadIOBytes", "FileSystemId", aws_efs_file_system.main.id, { stat = "Sum", label = "Read Bytes", color = "#2ca02c" }],
+            [".", "DataWriteIOBytes", ".", ".", { stat = "Sum", label = "Write Bytes", color = "#1f77b4" }]
+          ]
+          period = 300
+          stat   = "Sum"
+          yAxis = {
+            left = {
+              label = "Bytes"
+              min   = 0
+            }
+          }
+        }
+      },
+
+      # Widget 15: EFS Connection Count
+      {
+        type   = "metric"
+        x      = 12
+        y      = 28
+        width  = 12
+        height = 6
+        properties = {
+          title  = "EFS - Active Connections"
+          region = var.aws_region
+          metrics = [
+            ["AWS/EFS", "ClientConnections", "FileSystemId", aws_efs_file_system.main.id, { stat = "Sum", label = "Active Connections", color = "#1f77b4" }]
+          ]
+          period = 60
+          stat   = "Sum"
+          yAxis = {
+            left = {
+              min = 0
+            }
+          }
+        }
       }
     ]
   })
-
-  # Note: CloudWatch Dashboards don't support tags
-  # Tags can only be applied to alarms, topics, and other resources
 }
-*/
 
 # ============================================================================
 # DASHBOARD EXPLANATION FOR INTERVIEWS

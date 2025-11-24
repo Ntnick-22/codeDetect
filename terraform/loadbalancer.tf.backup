@@ -110,17 +110,17 @@ resource "aws_lb" "main" {
 }
 
 # ----------------------------------------------------------------------------
-# TARGET GROUPS - BLUE/GREEN DEPLOYMENT
+# TARGET GROUP
 # ----------------------------------------------------------------------------
 
-# BLUE Target Group (Primary)
-resource "aws_lb_target_group" "blue" {
-  name     = "${local.name_prefix}-blue-tg"
-  port     = 80  # Nginx reverse proxy
+resource "aws_lb_target_group" "app" {
+  name     = "${local.name_prefix}-tg-v2"  # Changed name to force new resource
+  port     = 80  # Changed from 5000 to 80 (Nginx reverse proxy)
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
   # Health check configuration
+  # ALB checks Nginx on port 80, which forwards to Flask app
   health_check {
     enabled             = true
     healthy_threshold   = 2   # 2 successful checks = healthy
@@ -135,7 +135,9 @@ resource "aws_lb_target_group" "blue" {
   # Deregistration delay - wait before removing instance
   deregistration_delay = 30
 
-  # Sticky sessions for session persistence
+  # Sticky sessions - CRITICAL for Grafana to work behind load balancer
+  # Routes requests from same user to same EC2 instance
+  # This ensures Grafana sessions persist (each instance has own Grafana DB)
   stickiness {
     type            = "lb_cookie"
     cookie_duration = 86400  # 24 hours
@@ -150,51 +152,7 @@ resource "aws_lb_target_group" "blue" {
   tags = merge(
     local.common_tags,
     {
-      Name        = "${local.name_prefix}-blue-target-group"
-      Environment = "blue"
-    }
-  )
-}
-
-# GREEN Target Group (Secondary/Deployment)
-resource "aws_lb_target_group" "green" {
-  name     = "${local.name_prefix}-green-tg"
-  port     = 80  # Nginx reverse proxy
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-
-  # Health check configuration (identical to blue)
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 30
-    path                = "/api/health"
-    protocol            = "HTTP"
-    matcher             = "200"
-  }
-
-  # Deregistration delay
-  deregistration_delay = 30
-
-  # Sticky sessions
-  stickiness {
-    type            = "lb_cookie"
-    cookie_duration = 86400  # 24 hours
-    enabled         = true
-  }
-
-  # Lifecycle
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name        = "${local.name_prefix}-green-target-group"
-      Environment = "green"
+      Name = "${local.name_prefix}-target-group-v2"
     }
   )
 }
@@ -292,19 +250,16 @@ resource "aws_launch_template" "app" {
 }
 
 # ----------------------------------------------------------------------------
-# AUTO SCALING GROUPS - BLUE/GREEN DEPLOYMENT
+# AUTO SCALING GROUP
 # ----------------------------------------------------------------------------
 
-# BLUE Auto Scaling Group
-resource "aws_autoscaling_group" "blue" {
-  name = "${local.name_prefix}-blue-asg"
+resource "aws_autoscaling_group" "app" {
+  name = "${local.name_prefix}-asg"
 
-  # Capacity configuration - controlled by active_environment variable
-  # If blue is active: 2-4 instances
-  # If green is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "blue" ? 2 : 0
-  max_size         = var.active_environment == "blue" ? 4 : 0
-  desired_capacity = var.active_environment == "blue" ? 2 : 0
+  # Capacity configuration
+  min_size         = 2 # Minimum 2 instances (for HA)
+  max_size         = 4 # Maximum 4 instances (can scale up if needed)
+  desired_capacity = 2 # Start with 2 instances
 
   # Health check configuration
   health_check_type         = "ELB" # Use load balancer health checks
@@ -319,8 +274,8 @@ resource "aws_autoscaling_group" "blue" {
     version = "$Latest"
   }
 
-  # Target group association - BLUE target group
-  target_group_arns = [aws_lb_target_group.blue.arn]
+  # Target group association
+  target_group_arns = [aws_lb_target_group.app.arn]
 
   # Instance refresh on update
   instance_refresh {
@@ -333,7 +288,7 @@ resource "aws_autoscaling_group" "blue" {
   # Tags propagated to instances
   tag {
     key                 = "Name"
-    value               = "${local.name_prefix}-blue-instance"
+    value               = "${local.name_prefix}-asg-instance"
     propagate_at_launch = true
   }
 
@@ -350,79 +305,6 @@ resource "aws_autoscaling_group" "blue" {
   }
 
   tag {
-    key                 = "DeploymentColor"
-    value               = "blue"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "ManagedBy"
-    value               = "AutoScaling"
-    propagate_at_launch = true
-  }
-}
-
-# GREEN Auto Scaling Group
-resource "aws_autoscaling_group" "green" {
-  name = "${local.name_prefix}-green-asg"
-
-  # Capacity configuration - controlled by active_environment variable
-  # If green is active: 2-4 instances
-  # If blue is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "green" ? 2 : 0
-  max_size         = var.active_environment == "green" ? 4 : 0
-  desired_capacity = var.active_environment == "green" ? 2 : 0
-
-  # Health check configuration
-  health_check_type         = "ELB"
-  health_check_grace_period = 300
-
-  # Network configuration
-  vpc_zone_identifier = [aws_subnet.public_1.id, aws_subnet.public_2.id]
-
-  # Launch template
-  launch_template {
-    id      = aws_launch_template.app.id
-    version = "$Latest"
-  }
-
-  # Target group association - GREEN target group
-  target_group_arns = [aws_lb_target_group.green.arn]
-
-  # Instance refresh on update
-  instance_refresh {
-    strategy = "Rolling"
-    preferences {
-      min_healthy_percentage = 50
-    }
-  }
-
-  # Tags propagated to instances
-  tag {
-    key                 = "Name"
-    value               = "${local.name_prefix}-green-instance"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "Application"
-    value               = local.app_name
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "Environment"
-    value               = var.environment
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "DeploymentColor"
-    value               = "green"
-    propagate_at_launch = true
-  }
-
-  tag {
     key                 = "ManagedBy"
     value               = "AutoScaling"
     propagate_at_launch = true
@@ -430,30 +312,30 @@ resource "aws_autoscaling_group" "green" {
 }
 
 # ----------------------------------------------------------------------------
-# AUTO SCALING POLICIES - BLUE ENVIRONMENT
+# AUTO SCALING POLICIES (Optional - for future scaling)
 # ----------------------------------------------------------------------------
 
-# Blue: Scale up when CPU > 70%
-resource "aws_autoscaling_policy" "blue_scale_up" {
-  name                   = "${local.name_prefix}-blue-scale-up"
+# Scale up when CPU > 70%
+resource "aws_autoscaling_policy" "scale_up" {
+  name                   = "${local.name_prefix}-scale-up"
   scaling_adjustment     = 1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.blue.name
+  autoscaling_group_name = aws_autoscaling_group.app.name
 }
 
-# Blue: Scale down when CPU < 30%
-resource "aws_autoscaling_policy" "blue_scale_down" {
-  name                   = "${local.name_prefix}-blue-scale-down"
+# Scale down when CPU < 30%
+resource "aws_autoscaling_policy" "scale_down" {
+  name                   = "${local.name_prefix}-scale-down"
   scaling_adjustment     = -1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.blue.name
+  autoscaling_group_name = aws_autoscaling_group.app.name
 }
 
-# Blue: CloudWatch alarm to trigger scale up
-resource "aws_cloudwatch_metric_alarm" "blue_cpu_high" {
-  alarm_name          = "${local.name_prefix}-blue-cpu-high"
+# CloudWatch alarm to trigger scale up
+resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  alarm_name          = "${local.name_prefix}-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
   metric_name         = "CPUUtilization"
@@ -463,24 +345,23 @@ resource "aws_cloudwatch_metric_alarm" "blue_cpu_high" {
   threshold           = 70
 
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.blue.name
+    AutoScalingGroupName = aws_autoscaling_group.app.name
   }
 
-  alarm_description = "Blue: Scale up when CPU exceeds 70%"
-  alarm_actions     = [aws_autoscaling_policy.blue_scale_up.arn]
+  alarm_description = "Scale up when CPU exceeds 70%"
+  alarm_actions     = [aws_autoscaling_policy.scale_up.arn]
 
   tags = merge(
     local.common_tags,
     {
-      Name        = "${local.name_prefix}-blue-cpu-high-alarm"
-      Environment = "blue"
+      Name = "${local.name_prefix}-cpu-high-alarm"
     }
   )
 }
 
-# Blue: CloudWatch alarm to trigger scale down
-resource "aws_cloudwatch_metric_alarm" "blue_cpu_low" {
-  alarm_name          = "${local.name_prefix}-blue-cpu-low"
+# CloudWatch alarm to trigger scale down
+resource "aws_cloudwatch_metric_alarm" "cpu_low" {
+  alarm_name          = "${local.name_prefix}-cpu-low"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 2
   metric_name         = "CPUUtilization"
@@ -490,93 +371,16 @@ resource "aws_cloudwatch_metric_alarm" "blue_cpu_low" {
   threshold           = 30
 
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.blue.name
+    AutoScalingGroupName = aws_autoscaling_group.app.name
   }
 
-  alarm_description = "Blue: Scale down when CPU below 30%"
-  alarm_actions     = [aws_autoscaling_policy.blue_scale_down.arn]
+  alarm_description = "Scale down when CPU below 30%"
+  alarm_actions     = [aws_autoscaling_policy.scale_down.arn]
 
   tags = merge(
     local.common_tags,
     {
-      Name        = "${local.name_prefix}-blue-cpu-low-alarm"
-      Environment = "blue"
-    }
-  )
-}
-
-# ----------------------------------------------------------------------------
-# AUTO SCALING POLICIES - GREEN ENVIRONMENT
-# ----------------------------------------------------------------------------
-
-# Green: Scale up when CPU > 70%
-resource "aws_autoscaling_policy" "green_scale_up" {
-  name                   = "${local.name_prefix}-green-scale-up"
-  scaling_adjustment     = 1
-  adjustment_type        = "ChangeInCapacity"
-  cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.green.name
-}
-
-# Green: Scale down when CPU < 30%
-resource "aws_autoscaling_policy" "green_scale_down" {
-  name                   = "${local.name_prefix}-green-scale-down"
-  scaling_adjustment     = -1
-  adjustment_type        = "ChangeInCapacity"
-  cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.green.name
-}
-
-# Green: CloudWatch alarm to trigger scale up
-resource "aws_cloudwatch_metric_alarm" "green_cpu_high" {
-  alarm_name          = "${local.name_prefix}-green-cpu-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 70
-
-  dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.green.name
-  }
-
-  alarm_description = "Green: Scale up when CPU exceeds 70%"
-  alarm_actions     = [aws_autoscaling_policy.green_scale_up.arn]
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name        = "${local.name_prefix}-green-cpu-high-alarm"
-      Environment = "green"
-    }
-  )
-}
-
-# Green: CloudWatch alarm to trigger scale down
-resource "aws_cloudwatch_metric_alarm" "green_cpu_low" {
-  alarm_name          = "${local.name_prefix}-green-cpu-low"
-  comparison_operator = "LessThanThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 30
-
-  dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.green.name
-  }
-
-  alarm_description = "Green: Scale down when CPU below 30%"
-  alarm_actions     = [aws_autoscaling_policy.green_scale_down.arn]
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name        = "${local.name_prefix}-green-cpu-low-alarm"
-      Environment = "green"
+      Name = "${local.name_prefix}-cpu-low-alarm"
     }
   )
 }
@@ -595,27 +399,12 @@ output "load_balancer_url" {
   value       = "http://${aws_lb.main.dns_name}"
 }
 
-output "active_environment" {
-  description = "Currently active environment (blue or green)"
-  value       = var.active_environment
+output "target_group_arn" {
+  description = "ARN of the target group"
+  value       = aws_lb_target_group.app.arn
 }
 
-output "blue_target_group_arn" {
-  description = "ARN of the blue target group"
-  value       = aws_lb_target_group.blue.arn
-}
-
-output "green_target_group_arn" {
-  description = "ARN of the green target group"
-  value       = aws_lb_target_group.green.arn
-}
-
-output "blue_asg_name" {
-  description = "Name of the blue Auto Scaling Group"
-  value       = aws_autoscaling_group.blue.name
-}
-
-output "green_asg_name" {
-  description = "Name of the green Auto Scaling Group"
-  value       = aws_autoscaling_group.green.name
+output "autoscaling_group_name" {
+  description = "Name of the Auto Scaling Group"
+  value       = aws_autoscaling_group.app.name
 }

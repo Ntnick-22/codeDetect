@@ -87,15 +87,18 @@ resource "aws_lb_listener" "https" {
   # Attach our SSL certificate
   certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
 
+  # Blue/Green Deployment: Forward traffic to active environment
+  # This uses the active_environment variable to determine which target group receives traffic
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = var.active_environment == "blue" ? aws_lb_target_group.blue.arn : aws_lb_target_group.green.arn
   }
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${local.name_prefix}-https-listener"
+      Name               = "${local.name_prefix}-https-listener"
+      ActiveEnvironment  = var.active_environment
     }
   )
 

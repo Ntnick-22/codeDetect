@@ -68,7 +68,7 @@ locals {
     echo "${aws_efs_file_system.main.id}:/ /mnt/efs efs _netdev,noresvport,tls 0 0" >> /etc/fstab
 
     # Mount all filesystems from fstab
-    mount -a -t efs defaults
+    mount -a -t efs
 
     # Wait for EFS to be ready
     sleep 5
@@ -114,14 +114,15 @@ locals {
     echo "=== Starting automatic deployment ===" >> /var/log/codedetect-deploy.log
     cd /home/ec2-user/app
 
-    # Clone repository as ec2-user
-    su - ec2-user -c "cd /home/ec2-user/app && git clone https://github.com/Ntnick-22/codeDetect.git . 2>&1" >> /var/log/codedetect-deploy.log
+    # Pull pre-built Docker image from Docker Hub
+    echo "Pulling Docker image: ${var.docker_image_repo}:${var.docker_tag}" >> /var/log/codedetect-deploy.log
+    su - ec2-user -c "docker pull ${var.docker_image_repo}:${var.docker_tag} 2>&1" >> /var/log/codedetect-deploy.log
+
+    # Tag the image as codedetect-app:latest for docker-compose compatibility
+    su - ec2-user -c "docker tag ${var.docker_image_repo}:${var.docker_tag} codedetect-app:latest 2>&1" >> /var/log/codedetect-deploy.log
 
     # Wait for Docker to be fully ready
-    sleep 10
-
-    # Build and start application as ec2-user
-    su - ec2-user -c "cd /home/ec2-user/app && docker build -t codedetect-app:latest . 2>&1" >> /var/log/codedetect-deploy.log
+    sleep 5
 
     # ========================================================================
     # AUTOMATIC DATA MIGRATION TO EFS (First Time Setup Only)

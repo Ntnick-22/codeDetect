@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: CI/CD - Docker Build & Blue/Green Deploy
 
 # When to run this workflow
 on:
@@ -6,12 +6,25 @@ on:
     branches:
       - main  # Run on every push to main branch
   workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      docker_tag:
+        description: 'Docker image tag (e.g., v1.0, v1.1)'
+        required: false
+        default: 'latest'
+      deploy_environment:
+        description: 'Deploy to blue or green environment'
+        required: false
+        default: 'blue'
+        type: choice
+        options:
+          - blue
+          - green
 
 # Environment variables available to all jobs
 env:
-  EC2_HOST: ${{ secrets.EC2_HOST }}
-  EC2_USER: ${{ secrets.EC2_USER }}
-  APP_DIR: /home/ec2-user/app
+  DOCKER_USERNAME: nyeinthunaing
+  DOCKER_IMAGE: nyeinthunaing/codedetect
+  AWS_REGION: eu-west-1
 
 jobs:
   # =================================================================
@@ -60,14 +73,6 @@ jobs:
           echo ""
           echo "Security scan complete. Check for HIGH severity issues."
 
-      - name: Run Radon (Complexity Check)
-        continue-on-error: true
-        run: |
-          echo "=== Running Radon Complexity Analysis ==="
-          radon cc backend/ -a -nb || true
-          echo ""
-          echo "Check for functions with complexity > 10"
-
       - name: Test Docker Build
         run: |
           echo "=== Testing Docker Build ==="
@@ -84,97 +89,218 @@ jobs:
           retention-days: 30
 
   # =================================================================
-  # JOB 2: DEPLOY VIA AUTO SCALING GROUP REFRESH
+  # JOB 2: BUILD & PUSH DOCKER IMAGE
   # =================================================================
-  deploy:
-    name: Deploy via Auto Scaling Group
+  build-docker:
+    name: Build & Push Docker Image
     needs: test
     runs-on: ubuntu-latest
 
+    outputs:
+      docker_tag: ${{ steps.generate_tag.outputs.tag }}
+
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Docker Tag
+        id: generate_tag
+        run: |
+          # If manual trigger with custom tag, use that
+          if [ "${{ github.event.inputs.docker_tag }}" != "" ]; then
+            TAG="${{ github.event.inputs.docker_tag }}"
+          else
+            # Auto-generate tag from commit SHA (first 7 chars)
+            TAG="v$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Generated Docker tag: $TAG"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:${{ steps.generate_tag.outputs.tag }}
+            ${{ env.DOCKER_IMAGE }}:latest
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:latest
+          cache-to: type=inline
+
+      - name: Image Summary
+        run: |
+          echo "✅ Docker image built and pushed successfully!"
+          echo ""
+          echo "📦 Image: ${{ env.DOCKER_IMAGE }}:${{ steps.generate_tag.outputs.tag }}"
+          echo "📦 Latest: ${{ env.DOCKER_IMAGE }}:latest"
+          echo ""
+          echo "To pull this image:"
+          echo "  docker pull ${{ env.DOCKER_IMAGE }}:${{ steps.generate_tag.outputs.tag }}"
+
+  # =================================================================
+  # JOB 3: BLUE/GREEN DEPLOYMENT TO AWS
+  # =================================================================
+  deploy:
+    name: Deploy to AWS (Blue/Green)
+    needs: build-docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Trigger Auto Scaling Group Instance Refresh
+      - name: Determine Target Environment
+        id: target_env
         run: |
-          echo "=== Starting Auto Scaling Group Instance Refresh ==="
-          echo "This will launch new instances with latest code"
+          # If manual trigger, use specified environment
+          if [ "${{ github.event.inputs.deploy_environment }}" != "" ]; then
+            TARGET="${{ github.event.inputs.deploy_environment }}"
+          else
+            # Auto-determine: Get current active environment, deploy to the other one
+            CURRENT=$(terraform -chdir=terraform output -raw active_environment 2>/dev/null || echo "blue")
+            if [ "$CURRENT" = "blue" ]; then
+              TARGET="green"
+            else
+              TARGET="blue"
+            fi
+          fi
 
-          aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name codedetect-prod-asg \
-            --preferences '{
-              "MinHealthyPercentage": 50,
-              "InstanceWarmup": 300
-            }'
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "🎯 Target environment: $TARGET"
 
-          echo "✅ Instance refresh started!"
-          echo "New instances will:"
-          echo "  1. Launch with latest AMI"
-          echo "  2. Run user data script"
-          echo "  3. Clone latest code from GitHub"
-          echo "  4. Build and start Docker containers"
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Blue/Green Deployment
+        run: |
+          cd terraform
+
+          DOCKER_TAG="${{ needs.build-docker.outputs.docker_tag }}"
+          TARGET_ENV="${{ steps.target_env.outputs.target }}"
+
+          echo "=== BLUE/GREEN DEPLOYMENT ==="
+          echo "🐳 Docker Tag: $DOCKER_TAG"
+          echo "🎯 Target Environment: $TARGET_ENV"
           echo ""
-          echo "Old instances will be terminated after new ones are healthy"
 
-      - name: Wait for Instance Refresh
+          # Plan the deployment
+          echo "📋 Running Terraform plan..."
+          terraform plan \
+            -var="active_environment=$TARGET_ENV" \
+            -var="docker_tag=$DOCKER_TAG" \
+            -out=tfplan
+
+          # Apply the deployment
+          echo ""
+          echo "🚀 Applying Terraform changes..."
+          terraform apply -auto-approve tfplan
+
+          echo ""
+          echo "✅ Terraform apply completed!"
+
+      - name: Wait for Instances to be Healthy
         run: |
-          echo "=== Monitoring instance refresh progress ==="
-          echo "This takes ~10-15 minutes (instances boot + warmup + health checks)"
+          TARGET_ENV="${{ steps.target_env.outputs.target }}"
+          ASG_NAME="codedetect-prod-${TARGET_ENV}-asg"
 
-          # Wait up to 30 minutes for refresh to complete
-          for i in {1..40}; do
-            STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name codedetect-prod-asg \
-              --query 'InstanceRefreshes[0].Status' \
-              --output text)
+          echo "=== Waiting for instances in $ASG_NAME to be healthy ==="
+          echo "This takes ~5-10 minutes (instance boot + Docker pull + health checks)"
 
-            PERCENT=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name codedetect-prod-asg \
-              --query 'InstanceRefreshes[0].PercentageComplete' \
-              --output text)
+          for i in {1..30}; do
+            # Get desired capacity
+            DESIRED=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names "$ASG_NAME" \
+              --query 'AutoScalingGroups[0].DesiredCapacity' \
+              --output text 2>/dev/null || echo "0")
 
-            echo "[$i/40] Refresh status: $STATUS ($PERCENT% complete)"
+            # Get healthy instance count
+            HEALTHY=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names "$ASG_NAME" \
+              --query 'AutoScalingGroups[0].Instances[?HealthStatus==`Healthy`]|length(@)' \
+              --output text 2>/dev/null || echo "0")
 
-            if [ "$STATUS" = "Successful" ]; then
-              echo "✅ Instance refresh completed successfully!"
+            echo "[$i/30] Healthy instances: $HEALTHY / $DESIRED"
+
+            if [ "$HEALTHY" -ge "$DESIRED" ] && [ "$DESIRED" -gt "0" ]; then
+              echo "✅ All instances are healthy!"
               break
-            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
-              echo "❌ Instance refresh $STATUS"
-              exit 1
             fi
 
-            sleep 45
+            sleep 20
           done
 
       - name: Health Check via Load Balancer
         run: |
           echo "=== Running health check ==="
-          sleep 10
+          sleep 15
 
-          # Try HTTPS first (since HTTP redirects to HTTPS)
+          # Try HTTPS health check
           response=$(curl -k -s -o /dev/null -w "%{http_code}" https://codedetect.nt-nick.link/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
             echo "✅ Deployment successful!"
-            echo "🌐 App URL: https://codedetect.nt-nick.link"
+            echo ""
+            echo "🌐 Application URL: https://codedetect.nt-nick.link"
+            echo "🐳 Docker Tag: ${{ needs.build-docker.outputs.docker_tag }}"
+            echo "🎯 Active Environment: ${{ steps.target_env.outputs.target }}"
+            echo ""
+            echo "App Info:"
             curl -k -s https://codedetect.nt-nick.link/api/info | head -10
           else
-            echo "⚠️ HTTPS health check response: $response"
-            echo "Trying HTTP with redirect follow..."
+            echo "⚠️ Health check response: $response"
+            echo "Application might still be starting..."
 
-            # Fallback: Try HTTP with redirect follow
-            response=$(curl -L -s -o /dev/null -w "%{http_code}" http://codedetect.nt-nick.link/api/health || echo "000")
+            # Retry a few times
+            for i in {1..5}; do
+              echo "Retry $i/5..."
+              sleep 15
+              response=$(curl -k -s -o /dev/null -w "%{http_code}" https://codedetect.nt-nick.link/api/health || echo "000")
+              if [ "$response" = "200" ]; then
+                echo "✅ Deployment successful!"
+                exit 0
+              fi
+            done
 
-            if [ "$response" = "200" ]; then
-              echo "✅ Deployment successful (via HTTP redirect)!"
-              echo "🌐 App URL: http://codedetect.nt-nick.link (redirects to HTTPS)"
-            else
-              echo "❌ Health check failed with status: $response"
-              echo "App might still be starting or there's a configuration issue"
-              exit 1
-            fi
+            echo "❌ Health check failed. Please check AWS Console."
+            exit 1
           fi
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 DEPLOYMENT SUMMARY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🐳 Docker Image: ${{ env.DOCKER_IMAGE }}:${{ needs.build-docker.outputs.docker_tag }}"
+          echo "🎯 Deployed to: ${{ steps.target_env.outputs.target }} environment"
+          echo "🌐 URL: https://codedetect.nt-nick.link"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Next steps:"
+          echo "  - Test the application thoroughly"
+          echo "  - Monitor CloudWatch metrics"
+          echo "  - If issues, rollback with: terraform apply -var='active_environment=<old-env>'"
