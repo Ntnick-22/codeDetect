@@ -216,7 +216,7 @@ variable "s3_enable_versioning" {
 variable "enable_dns" {
   description = "Enable Route53 DNS configuration"
   type        = bool
-  default     = false  # Disabled by default to avoid errors
+  default     = true  # Enabled - we have the nt-nick.link hosted zone
 
   # Set to true only if:
   # 1. You have a Route53 hosted zone
