@@ -107,12 +107,27 @@ locals {
     echo "=== Starting automatic deployment ===" >> /var/log/codedetect-deploy.log
     cd /home/ec2-user/app
 
-    # Pull pre-built Docker image from Docker Hub
-    echo "Pulling Docker image: ${var.docker_image_repo}:${var.docker_tag}" >> /var/log/codedetect-deploy.log
+    # Clone repository to get docker-compose.yml and configuration files
+    echo "Cloning repository for docker-compose.yml" >> /var/log/codedetect-deploy.log
+    su - ec2-user -c "cd /home/ec2-user/app && git clone https://github.com/Ntnick-22/codeDetect.git . 2>&1" >> /var/log/codedetect-deploy.log
+
+    if [ ! -f /home/ec2-user/app/docker-compose.yml ]; then
+      echo "ERROR: docker-compose.yml not found after git clone" >> /var/log/codedetect-deploy.log
+      exit 1
+    fi
+    echo "Repository cloned successfully" >> /var/log/codedetect-deploy.log
+
+    # Pull pre-built Docker image from Docker Hub (faster than building)
+    echo "Pulling pre-built Docker image: ${var.docker_image_repo}:${var.docker_tag}" >> /var/log/codedetect-deploy.log
     su - ec2-user -c "docker pull ${var.docker_image_repo}:${var.docker_tag} 2>&1" >> /var/log/codedetect-deploy.log
 
     # Tag the image as codedetect-app:latest for docker-compose compatibility
+    echo "Tagging image as codedetect-app:latest" >> /var/log/codedetect-deploy.log
     su - ec2-user -c "docker tag ${var.docker_image_repo}:${var.docker_tag} codedetect-app:latest 2>&1" >> /var/log/codedetect-deploy.log
+
+    # Verify image is available
+    echo "Verifying Docker image availability" >> /var/log/codedetect-deploy.log
+    su - ec2-user -c "docker images | grep codedetect-app" >> /var/log/codedetect-deploy.log
 
     # Wait for Docker to be fully ready
     sleep 5

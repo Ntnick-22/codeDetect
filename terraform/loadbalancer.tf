@@ -208,21 +208,18 @@ resource "aws_lb_listener" "http" {
   port              = "80"
   protocol          = "HTTP"
 
-  # Redirect all HTTP traffic to HTTPS
+  # Forward to active environment (blue or green)
+  # When enable_dns=true, this can be changed to redirect to HTTPS
   default_action {
-    type = "redirect"
-
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"  # Permanent redirect
-    }
+    type             = "forward"
+    target_group_arn = var.active_environment == "blue" ? aws_lb_target_group.blue.arn : aws_lb_target_group.green.arn
   }
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${local.name_prefix}-http-listener"
+      Name               = "${local.name_prefix}-http-listener"
+      ActiveEnvironment  = var.active_environment
     }
   )
 }
