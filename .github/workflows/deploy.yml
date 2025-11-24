@@ -268,20 +268,26 @@ jobs:
       - name: Health Check via Load Balancer
         run: |
           echo "=== Running health check ==="
+
+          # Get ALB DNS name from Terraform output
+          cd terraform
+          ALB_DNS=$(terraform output -raw load_balancer_dns)
+          echo "ALB DNS: $ALB_DNS"
+
           sleep 15
 
-          # Try HTTPS health check
-          response=$(curl -k -s -o /dev/null -w "%{http_code}" https://codedetect.nt-nick.link/api/health || echo "000")
+          # Try HTTP health check via ALB DNS (since enable_dns=false)
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://$ALB_DNS/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
             echo "✅ Deployment successful!"
             echo ""
-            echo "🌐 Application URL: https://codedetect.nt-nick.link"
+            echo "🌐 Application URL: http://$ALB_DNS"
             echo "🐳 Docker Tag: ${{ needs.build-docker.outputs.docker_tag }}"
             echo "🎯 Active Environment: ${{ steps.target_env.outputs.target }}"
             echo ""
             echo "App Info:"
-            curl -k -s https://codedetect.nt-nick.link/api/info | head -10
+            curl -s http://$ALB_DNS/api/info | head -10
           else
             echo "⚠️ Health check response: $response"
             echo "Application might still be starting..."
@@ -290,30 +296,36 @@ jobs:
             for i in {1..5}; do
               echo "Retry $i/5..."
               sleep 15
-              response=$(curl -k -s -o /dev/null -w "%{http_code}" https://codedetect.nt-nick.link/api/health || echo "000")
+              response=$(curl -s -o /dev/null -w "%{http_code}" http://$ALB_DNS/api/health || echo "000")
               if [ "$response" = "200" ]; then
                 echo "✅ Deployment successful!"
+                echo ""
+                echo "🌐 Application URL: http://$ALB_DNS"
                 exit 0
               fi
             done
 
-            echo "❌ Health check failed. Please check AWS Console."
+            echo "❌ Health check failed after retries. Please check AWS Console."
+            echo "Check ALB target health: https://console.aws.amazon.com/ec2/v2/home?region=eu-west-1#TargetGroups:"
             exit 1
           fi
 
       - name: Deployment Summary
         if: always()
         run: |
+          cd terraform
+          ALB_DNS=$(terraform output -raw load_balancer_dns 2>/dev/null || echo "unknown")
+
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📊 DEPLOYMENT SUMMARY"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🐳 Docker Image: ${{ env.DOCKER_IMAGE }}:${{ needs.build-docker.outputs.docker_tag }}"
           echo "🎯 Deployed to: ${{ steps.target_env.outputs.target }} environment"
-          echo "🌐 URL: https://codedetect.nt-nick.link"
+          echo "🌐 URL: http://$ALB_DNS"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "Next steps:"
-          echo "  - Test the application thoroughly"
+          echo "  - Test the application: curl http://$ALB_DNS/api/health"
           echo "  - Monitor CloudWatch metrics"
           echo "  - If issues, rollback with: terraform apply -var='active_environment=<old-env>'"
