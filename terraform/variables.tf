@@ -290,7 +290,7 @@ variable "enable_https" {
 variable "notification_email" {
   description = "Email address for SNS notifications"
   type        = string
-  default     = "nyeinthunaing322@.com" # CHANGE THIS!
+  default     = "nyeinthunaing322@gmail.com"
 }
 
 # Enable CloudWatch monitoring
