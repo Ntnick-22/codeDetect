@@ -23,12 +23,12 @@ terraform {
     }
   }
 
-  # Optional: Store Terraform state remotely (uncomment for team projects)
-  # backend "s3" {
-  #   bucket = "codedetect-terraform-state"
-  #   key    = "prod/terraform.tfstate"
-  #   region = "us-east-1"
-  # }
+  # Store Terraform state remotely in S3 (for GitHub Actions + local)
+  backend "s3" {
+    bucket = "codedetect-terraform-state-772297676546"
+    key    = "prod/terraform.tfstate"
+    region = "eu-west-1"
+  }
 }
 
 # ----------------------------------------------------------------------------
