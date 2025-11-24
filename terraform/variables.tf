@@ -164,6 +164,7 @@ variable "db_password" {
   description = "Master password for database"
   type        = string
   sensitive   = true # Hides value in Terraform output
+  default     = "not-used-sqlite-only" # Default value since we're using SQLite
 
   # For this project, you'll set this when running terraform apply
   # In production, use AWS Secrets Manager instead
