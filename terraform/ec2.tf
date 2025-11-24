@@ -1,16 +1,9 @@
-resource "aws_key_pair" "main" {
-  key_name   = var.key_pair_name
-  public_key = file("${path.module}/codedetect-key.pub") # Your public key file
+# Use existing key pair (already created in AWS)
+data "aws_key_pair" "main" {
+  key_name = var.key_pair_name
 
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "${local.name_prefix}-key"
-    }
-  )
-
-  # If you don't have a key yet, comment out this resource
-  # and create manually in AWS Console first
+  # This references the existing key pair in AWS
+  # No need to upload public key file
 }
 
 # ----------------------------------------------------------------------------
