@@ -93,7 +93,7 @@ output "ssh_connection_command" {
 
 output "ssh_key_name" {
   description = "Name of SSH key pair"
-  value       = aws_key_pair.main.key_name
+  value       = data.aws_key_pair.main.key_name
 }
 
 # ----------------------------------------------------------------------------

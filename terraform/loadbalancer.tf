@@ -236,7 +236,7 @@ resource "aws_launch_template" "app" {
   image_id      = data.aws_ami.amazon_linux_2.id
   instance_type = var.instance_type
 
-  key_name = aws_key_pair.main.key_name
+  key_name = data.aws_key_pair.main.key_name
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ec2.name
