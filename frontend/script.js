@@ -382,9 +382,8 @@ function displayResults(data) {
 
     // Create charts
     createCharts(data);
-    
-    // Reload history
-    loadHistory();
+
+    // Note: History removed for privacy - analytics updated on dashboard instead
 
     // Scroll to results
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
