@@ -1,26 +1,44 @@
 /* ============================================
-   AWS Console-Style Dashboard
-   CodeDetect - Modern Dark Theme
+   CodeDetect - Clean Minimal Theme
+   Simple, Professional, Modern
    ============================================ */
 
-/* CSS Variables */
+/* CSS Variables - Clean Minimal Theme */
 :root {
-    --aws-dark-bg: #0f1419;
-    --aws-sidebar-bg: #16191f;
-    --aws-navbar-bg: #232f3e;
-    --aws-card-bg: #1e2127;
-    --aws-border: #2e3338;
-    --aws-text: #ffffff;
-    --aws-text-muted: #9ca3af;
-    --aws-primary: #ff9900;
-    --aws-primary-hover: #ec7211;
-    --aws-success: #00a86b;
-    --aws-danger: #d13212;
-    --aws-warning: #fbbf24;
-    --aws-info: #0972d3;
-    --sidebar-width: 250px;
-    --navbar-height: 60px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Backgrounds - Clean whites and grays */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #f1f3f5;
+    --sidebar-bg: #ffffff;
+    --navbar-bg: #ffffff;
+    --card-bg: #ffffff;
+
+    /* Borders - Subtle */
+    --border-color: #e9ecef;
+    --border-dark: #dee2e6;
+
+    /* Text - Dark grays */
+    --text-primary: #1a1a1a;
+    --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
+
+    /* Accent Colors - Vibrant but not overwhelming */
+    --accent-primary: #6366f1;        /* Indigo - modern, professional */
+    --accent-primary-hover: #4f46e5;
+    --accent-success: #10b981;        /* Green */
+    --accent-danger: #ef4444;         /* Red */
+    --accent-warning: #f59e0b;        /* Amber */
+    --accent-info: #3b82f6;           /* Blue */
+
+    /* Layout */
+    --sidebar-width: 240px;
+    --navbar-height: 64px;
+    --transition: all 0.2s ease;
+
+    /* Shadows - Subtle depth */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -30,10 +48,11 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Amazon Ember', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: var(--aws-dark-bg);
-    color: var(--aws-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     overflow-x: hidden;
+    line-height: 1.6;
 }
 
 /* ============================================
@@ -56,25 +75,25 @@ body {
     left: 0;
     right: 0;
     height: var(--navbar-height);
-    background: var(--aws-navbar-bg);
-    border-bottom: 1px solid var(--aws-border);
+    background: var(--navbar-bg);
+    border-bottom: 1px solid var(--border-color);
     z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-sm);
 }
 
 .sidebar-toggle {
     background: transparent;
     border: none;
-    color: white;
+    color: var(--text-primary);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0.5rem;
-    border-radius: 4px;
+    border-radius: 8px;
     transition: var(--transition);
 }
 
 .sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-tertiary);
 }
 
 /* ============================================
@@ -87,8 +106,8 @@ body {
     left: 0;
     width: var(--sidebar-width);
     height: calc(100vh - var(--navbar-height));
-    background: var(--aws-sidebar-bg);
-    border-right: 1px solid var(--aws-border);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
     overflow-y: auto;
     transition: var(--transition);
     z-index: 999;
@@ -106,7 +125,7 @@ body {
 
 .sidebar-header {
     padding: 1rem 0;
-    border-bottom: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-menu {
@@ -118,7 +137,7 @@ body {
     display: flex;
     align-items: center;
     padding: 0.75rem 1.5rem;
-    color: var(--aws-text-muted);
+    color: var(--text-muted);
     text-decoration: none;
     transition: var(--transition);
     border-left: 3px solid transparent;
@@ -126,13 +145,13 @@ body {
 
 .sidebar-item:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: var(--aws-text);
+    color: var(--text-primary);
 }
 
 .sidebar-item.active {
     background: rgba(255, 153, 0, 0.1);
-    color: var(--aws-primary);
-    border-left-color: var(--aws-primary);
+    color: var(--accent-primary);
+    border-left-color: var(--accent-primary);
 }
 
 .sidebar-item i {
@@ -142,7 +161,7 @@ body {
 }
 
 .sidebar-footer {
-    border-top: 1px solid var(--aws-border);
+    border-top: 1px solid var(--border-color);
     margin-top: auto;
 }
 
@@ -187,7 +206,7 @@ body {
 }
 
 .content-header p {
-    color: var(--aws-text-muted);
+    color: var(--text-muted);
     margin: 0;
 }
 
@@ -196,8 +215,8 @@ body {
    ============================================ */
 
 .aws-card {
-    background: var(--aws-card-bg);
-    border: 1px solid var(--aws-border);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 1.5rem;
     overflow: hidden;
@@ -205,7 +224,7 @@ body {
 
 .aws-card .card-header {
     background: transparent;
-    border-bottom: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--border-color);
     padding: 1rem 1.5rem;
 }
 
@@ -213,7 +232,7 @@ body {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: var(--aws-text);
+    color: var(--text-primary);
 }
 
 .aws-card .card-body {
@@ -232,8 +251,8 @@ body {
 }
 
 .stat-card {
-    background: var(--aws-card-bg);
-    border: 1px solid var(--aws-border);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1.5rem;
     display: flex;
@@ -243,7 +262,7 @@ body {
 }
 
 .stat-card:hover {
-    border-color: var(--aws-primary);
+    border-color: var(--accent-primary);
     box-shadow: 0 4px 12px rgba(255, 153, 0, 0.2);
 }
 
@@ -262,12 +281,12 @@ body {
     font-size: 1.75rem;
     font-weight: 700;
     margin: 0;
-    color: var(--aws-text);
+    color: var(--text-primary);
 }
 
 .stat-info p {
     margin: 0;
-    color: var(--aws-text-muted);
+    color: var(--text-muted);
     font-size: 0.875rem;
 }
 
@@ -276,7 +295,7 @@ body {
    ============================================ */
 
 .upload-area {
-    border: 2px dashed var(--aws-border);
+    border: 2px dashed var(--border-color);
     border-radius: 8px;
     padding: 3rem 2rem;
     text-align: center;
@@ -286,23 +305,23 @@ body {
 }
 
 .upload-area:hover {
-    border-color: var(--aws-primary);
+    border-color: var(--accent-primary);
     background: rgba(255, 153, 0, 0.05);
 }
 
 .upload-icon {
     font-size: 3rem;
-    color: var(--aws-primary);
+    color: var(--accent-primary);
     margin-bottom: 1rem;
 }
 
 .upload-area h4 {
-    color: var(--aws-text);
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
 .upload-area p {
-    color: var(--aws-text-muted);
+    color: var(--text-muted);
     margin: 0;
 }
 
@@ -319,9 +338,9 @@ body {
     justify-content: center;
     font-size: 3rem;
     font-weight: 700;
-    border: 4px solid var(--aws-border);
-    background: var(--aws-sidebar-bg);
-    color: var(--aws-text);
+    border: 4px solid var(--border-color);
+    background: var(--sidebar-bg);
+    color: var(--text-primary);
     animation: scaleIn 0.5s ease-out;
 }
 
@@ -331,18 +350,18 @@ body {
 }
 
 .score-good {
-    border-color: var(--aws-success);
-    color: var(--aws-success);
+    border-color: var(--accent-success);
+    color: var(--accent-success);
 }
 
 .score-medium {
-    border-color: var(--aws-warning);
-    color: var(--aws-warning);
+    border-color: var(--accent-warning);
+    color: var(--accent-warning);
 }
 
 .score-bad {
-    border-color: var(--aws-danger);
-    color: var(--aws-danger);
+    border-color: var(--accent-danger);
+    color: var(--accent-danger);
 }
 
 /* ============================================
@@ -358,7 +377,7 @@ body {
 }
 
 .btn-primary {
-    background: var(--aws-primary);
+    background: var(--accent-primary);
     color: #000;
 }
 
@@ -368,7 +387,7 @@ body {
 }
 
 .btn-success {
-    background: var(--aws-success);
+    background: var(--accent-success);
     color: white;
 }
 
@@ -395,13 +414,13 @@ body {
 
 .alert-danger {
     background: rgba(209, 50, 18, 0.1);
-    border-color: var(--aws-danger);
+    border-color: var(--accent-danger);
     color: #fca5a5;
 }
 
 .alert-warning {
     background: rgba(251, 191, 36, 0.1);
-    border-color: var(--aws-warning);
+    border-color: var(--accent-warning);
     color: #fde68a;
 }
 
@@ -413,8 +432,8 @@ body {
 
 .alert-secondary {
     background: rgba(255, 255, 255, 0.05);
-    border-color: var(--aws-border);
-    color: var(--aws-text-muted);
+    border-color: var(--border-color);
+    color: var(--text-muted);
 }
 
 .badge {
@@ -424,10 +443,10 @@ body {
     font-weight: 600;
 }
 
-.bg-success { background: var(--aws-success) !important; }
-.bg-danger { background: var(--aws-danger) !important; }
-.bg-warning { background: var(--aws-warning) !important; }
-.bg-primary { background: var(--aws-primary) !important; color: #000 !important; }
+.bg-success { background: var(--accent-success) !important; }
+.bg-danger { background: var(--accent-danger) !important; }
+.bg-warning { background: var(--accent-warning) !important; }
+.bg-primary { background: var(--accent-primary) !important; color: #000 !important; }
 .bg-info { background: var(--aws-info) !important; }
 
 .issue-badge {
@@ -438,8 +457,8 @@ body {
     margin-right: 0.5rem;
 }
 
-.severity-HIGH { background: var(--aws-danger); }
-.severity-MEDIUM { background: var(--aws-warning); color: #000; }
+.severity-HIGH { background: var(--accent-danger); }
+.severity-MEDIUM { background: var(--accent-warning); color: #000; }
 .severity-LOW { background: var(--aws-info); }
 
 /* ============================================
@@ -447,17 +466,17 @@ body {
    ============================================ */
 
 .table {
-    color: var(--aws-text);
+    color: var(--text-primary);
     margin-bottom: 0;
 }
 
 .table td, .table th {
-    border-color: var(--aws-border);
+    border-color: var(--border-color);
     padding: 0.75rem;
 }
 
 .table a {
-    color: var(--aws-primary);
+    color: var(--accent-primary);
     text-decoration: none;
 }
 
@@ -470,26 +489,26 @@ body {
    ============================================ */
 
 .modal-content {
-    background: var(--aws-card-bg);
-    border: 1px solid var(--aws-border);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
 }
 
 .modal-header {
     background: var(--aws-navbar-bg);
-    border-bottom: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .modal-title {
-    color: var(--aws-text);
+    color: var(--text-primary);
 }
 
 .modal-body {
-    color: var(--aws-text);
+    color: var(--text-primary);
 }
 
 .modal-body h6 {
-    color: var(--aws-primary);
+    color: var(--accent-primary);
 }
 
 .btn-close {
@@ -501,23 +520,23 @@ body {
    ============================================ */
 
 .dropdown-menu {
-    background: var(--aws-card-bg);
-    border: 1px solid var(--aws-border);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
 }
 
 .dropdown-item {
-    color: var(--aws-text);
+    color: var(--text-primary);
     transition: var(--transition);
 }
 
 .dropdown-item:hover {
     background: rgba(255, 153, 0, 0.1);
-    color: var(--aws-primary);
+    color: var(--accent-primary);
 }
 
 .dropdown-divider {
-    border-color: var(--aws-border);
+    border-color: var(--border-color);
 }
 
 /* ============================================
@@ -528,7 +547,7 @@ body {
     background: rgba(255, 255, 255, 0.03);
     padding: 1rem;
     border-radius: 6px;
-    border-left: 3px solid var(--aws-primary);
+    border-left: 3px solid var(--accent-primary);
 }
 
 /* ============================================
@@ -572,23 +591,23 @@ body {
    ============================================ */
 
 .text-muted {
-    color: var(--aws-text-muted) !important;
+    color: var(--text-muted) !important;
 }
 
 .text-primary {
-    color: var(--aws-primary) !important;
+    color: var(--accent-primary) !important;
 }
 
 .text-success {
-    color: var(--aws-success) !important;
+    color: var(--accent-success) !important;
 }
 
 .text-danger {
-    color: var(--aws-danger) !important;
+    color: var(--accent-danger) !important;
 }
 
 .text-warning {
-    color: var(--aws-warning) !important;
+    color: var(--accent-warning) !important;
 }
 
 /* Smooth scrolling */
@@ -598,6 +617,6 @@ html {
 
 /* Focus states */
 button:focus, input:focus {
-    outline: 2px solid var(--aws-primary);
+    outline: 2px solid var(--accent-primary);
     outline-offset: 2px;
 }

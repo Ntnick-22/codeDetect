@@ -876,25 +876,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-// Load version badge in top navigation
+// Load version badge and region in top navigation
 async function loadVersionBadge() {
     try {
         const response = await fetch('/api/info');
         if (!response.ok) throw new Error('Failed to fetch version');
 
         const data = await response.json();
-        const versionText = document.getElementById('version-text');
 
+        // Update version
+        const versionText = document.getElementById('version-text');
         if (versionText && data.deployment?.docker_tag) {
             versionText.textContent = data.deployment.docker_tag;
         } else if (versionText) {
-            versionText.textContent = 'unknown';
+            versionText.textContent = 'local-dev';
+        }
+
+        // Update region dynamically
+        const regionText = document.getElementById('region-text');
+        if (regionText && data.environment?.aws_region) {
+            // Format region nicely (eu-west-1 => EU-West-1)
+            const region = data.environment.aws_region;
+            const formatted = region.split('-').map(part =>
+                part.charAt(0).toUpperCase() + part.slice(1)
+            ).join('-');
+            regionText.textContent = formatted;
+        } else if (regionText) {
+            regionText.textContent = 'Local';
         }
     } catch (error) {
         console.error('Error loading version:', error);
         const versionText = document.getElementById('version-text');
         if (versionText) {
             versionText.textContent = 'error';
+        }
+        const regionText = document.getElementById('region-text');
+        if (regionText) {
+            regionText.textContent = 'Unknown';
         }
     }
 }
@@ -907,11 +925,17 @@ async function updateDashboardStats() {
         const data = await response.json();
 
         if (data) {
-            // Update stat cards
-            document.getElementById('dashTotalAnalyses').textContent = data.total_analyses;
-            document.getElementById('dashAvgScore').textContent = data.avg_score || '--';
-            document.getElementById('dashSecurityIssues').textContent = data.total_security_issues;
-            document.getElementById('dashQualityIssues').textContent = data.total_quality_issues;
+            // Show stats grid if we have data
+            const statsGridContainer = document.getElementById('stats-grid-container');
+            if (data.total_analyses > 0 && statsGridContainer) {
+                statsGridContainer.style.display = 'block';
+
+                // Update stat cards
+                document.getElementById('dashTotalAnalyses').textContent = data.total_analyses;
+                document.getElementById('dashAvgScore').textContent = data.avg_score || '--';
+                document.getElementById('dashSecurityIssues').textContent = data.total_security_issues;
+                document.getElementById('dashQualityIssues').textContent = data.total_quality_issues;
+            }
 
             // Create trend charts if we have data
             if (data.trend_data && data.trend_data.length > 0) {

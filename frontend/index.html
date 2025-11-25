@@ -24,16 +24,18 @@
                     <button class="sidebar-toggle" id="sidebarToggle">
                         <i class="bi bi-list"></i>
                     </button>
-                    <h5 class="mb-0 ms-3 text-white fw-bold">CodeDetect</h5>
-                    <span class="badge bg-success ms-3">HA Deployed</span>
-                    <span class="badge bg-info ms-2" id="version-badge">
+                    <h5 class="mb-0 ms-3 fw-bold" style="color: var(--text-primary);">CodeDetect</h5>
+                    <span class="badge ms-3" style="background: var(--accent-success); color: white;">Live</span>
+                    <span class="badge ms-2" style="background: var(--bg-tertiary); color: var(--text-secondary);" id="version-badge">
                         <i class="bi bi-tag me-1"></i><span id="version-text">Loading...</span>
                     </span>
                 </div>
                 <div class="d-flex align-items-center">
-                    <span class="text-white-50 me-3"><i class="bi bi-geo-alt"></i> EU-West-1</span>
+                    <span class="me-3" style="color: var(--text-secondary);" id="region-badge">
+                        <i class="bi bi-geo-alt"></i> <span id="region-text">Loading...</span>
+                    </span>
                     <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <button class="btn btn-sm" style="border: 1px solid var(--border-color); color: var(--text-primary);" type="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> User
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
@@ -51,7 +53,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-content">
                 <div class="sidebar-header">
-                    <h6 class="text-white-50 mb-3 mt-3 px-3">SERVICES</h6>
+                    <h6 class="mb-3 mt-3 px-3" style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Services</h6>
                 </div>
                 <nav class="sidebar-menu">
                     <a href="#" class="sidebar-item active" onclick="showSection('dashboard')">
@@ -73,8 +75,8 @@
                 </nav>
                 <div class="sidebar-footer">
                     <div class="px-3 py-3">
-                        <small class="text-white-50">Version 2.1.0-HA</small><br>
-                        <small class="text-white-50">Auto Scaling: Active</small>
+                        <small style="color: var(--text-muted);">Auto Scaling: Active</small><br>
+                        <small style="color: var(--text-muted);">High Availability</small>
                     </div>
                 </div>
             </div>
@@ -85,46 +87,55 @@
 
             <!-- Dashboard Section -->
             <div id="section-dashboard" class="content-section active">
-                <div class="content-header">
-                    <h2><i class="bi bi-speedometer2 me-2"></i>Dashboard</h2>
-                    <p class="text-muted">Code Quality Analysis Overview</p>
+                <!-- Hero Section -->
+                <div class="aws-card mb-4" style="background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-info) 100%); border: none;">
+                    <div class="card-body text-center py-5">
+                        <h1 class="display-4 fw-bold text-white mb-3">Code Quality Analyzer</h1>
+                        <p class="lead text-white mb-4">Automated Python code analysis with security scanning and complexity detection</p>
+                        <button class="btn btn-light btn-lg px-4" onclick="showSection('upload')" style="border-radius: 8px;">
+                            <i class="bi bi-cloud-upload me-2"></i>Analyze Your Code
+                        </button>
+                    </div>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon bg-primary">
-                            <i class="bi bi-code-square"></i>
+                <!-- Stats Grid (Hidden if no data) -->
+                <div id="stats-grid-container" style="display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary">
+                                <i class="bi bi-code-square"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="dashTotalAnalyses">0</h3>
+                                <p>Total Analyses</p>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <h3 id="dashTotalAnalyses">0</h3>
-                            <p>Total Analyses</p>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-success">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="dashAvgScore">--</h3>
+                                <p>Average Score</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon bg-success">
-                            <i class="bi bi-check-circle"></i>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-danger">
+                                <i class="bi bi-shield-exclamation"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="dashSecurityIssues">0</h3>
+                                <p>Security Issues</p>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <h3 id="dashAvgScore">--</h3>
-                            <p>Average Score</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon bg-danger">
-                            <i class="bi bi-shield-exclamation"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="dashSecurityIssues">0</h3>
-                            <p>Security Issues</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon bg-warning">
-                            <i class="bi bi-exclamation-triangle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="dashQualityIssues">0</h3>
-                            <p>Quality Issues</p>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="dashQualityIssues">0</h3>
+                                <p>Quality Issues</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -152,23 +163,38 @@
                     </div>
                 </div>
 
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="aws-card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-info-circle me-2"></i>Quick Start</h5>
-                            </div>
+                <!-- Features Grid -->
+                <div class="row mt-4 g-4">
+                    <div class="col-md-4">
+                        <div class="aws-card text-center h-100">
                             <div class="card-body">
-                                <p>Welcome to CodeDetect - Your automated Python code quality analyzer.</p>
-                                <ol>
-                                    <li>Navigate to <strong>Upload & Analyze</strong> to check your Python code</li>
-                                    <li>View detailed analysis results with security and quality metrics</li>
-                                    <li>Check <strong>Analysis History</strong> to see past results</li>
-                                    <li>Monitor <strong>Deployment Info</strong> for infrastructure status</li>
-                                </ol>
-                                <button class="btn btn-primary" onclick="showSection('upload')">
-                                    <i class="bi bi-cloud-upload me-2"></i>Start Analysis
-                                </button>
+                                <div class="mb-3" style="font-size: 3rem; color: var(--accent-success);">
+                                    <i class="bi bi-shield-check"></i>
+                                </div>
+                                <h5>Security Scanning</h5>
+                                <p class="text-muted">Detect SQL injection, hardcoded passwords, and unsafe operations with Bandit</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="aws-card text-center h-100">
+                            <div class="card-body">
+                                <div class="mb-3" style="font-size: 3rem; color: var(--accent-info);">
+                                    <i class="bi bi-bug"></i>
+                                </div>
+                                <h5>Code Quality</h5>
+                                <p class="text-muted">Find style violations, code smells, and best practice issues with Pylint</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="aws-card text-center h-100">
+                            <div class="card-body">
+                                <div class="mb-3" style="font-size: 3rem; color: var(--accent-warning);">
+                                    <i class="bi bi-bar-chart"></i>
+                                </div>
+                                <h5>Complexity Metrics</h5>
+                                <p class="text-muted">Measure cyclomatic complexity and maintainability with Radon</p>
                             </div>
                         </div>
                     </div>
