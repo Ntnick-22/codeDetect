@@ -35,14 +35,25 @@
                         <i class="bi bi-geo-alt"></i> <span id="region-text">Loading...</span>
                     </span>
                     <div class="dropdown">
-                        <button class="btn btn-sm" style="border: 1px solid var(--border-color); color: var(--text-primary);" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> User
+                        <button class="btn btn-sm" style="border: 1px solid var(--border-color); color: var(--text-primary); font-size: 1.2rem; padding: 0.25rem 0.5rem;" type="button" data-bs-toggle="dropdown" aria-label="Menu">
+                            <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">About</a></li>
-                            <li><a class="dropdown-item" href="https://github.com/Ntnick-22/codeDetect" target="_blank">GitHub</a></li>
+                            <li><h6 class="dropdown-header">Information</h6></li>
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">
+                                <i class="bi bi-info-circle me-2"></i>About This Project
+                            </a></li>
+                            <li><a class="dropdown-item" href="https://github.com/Ntnick-22/codeDetect" target="_blank">
+                                <i class="bi bi-github me-2"></i>GitHub Repository
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="showSection('deployment')">Deployment Info</a></li>
+                            <li><h6 class="dropdown-header">System</h6></li>
+                            <li><a class="dropdown-item" href="#" onclick="showSection('deployment')">
+                                <i class="bi bi-server me-2"></i>Deployment Status
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#reportModal">
+                                <i class="bi bi-bug me-2"></i>Report Issue / Feedback
+                            </a></li>
                         </ul>
                     </div>
                 </div>
@@ -56,21 +67,21 @@
                     <h6 class="mb-3 mt-3 px-3" style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Services</h6>
                 </div>
                 <nav class="sidebar-menu">
-                    <a href="#" class="sidebar-item active" onclick="showSection('dashboard')">
-                        <i class="bi bi-speedometer2"></i>
-                        <span>Dashboard</span>
+                    <a href="#" class="sidebar-item active" onclick="showSection('home')">
+                        <i class="bi bi-house"></i>
+                        <span>Home</span>
                     </a>
                     <a href="#" class="sidebar-item" onclick="showSection('upload')">
                         <i class="bi bi-cloud-upload"></i>
-                        <span>Upload & Analyze</span>
+                        <span>Analyze Code</span>
                     </a>
-                    <a href="#" class="sidebar-item" onclick="showSection('analytics')">
-                        <i class="bi bi-bar-chart"></i>
-                        <span>Analytics</span>
+                    <a href="#" class="sidebar-item" onclick="showSection('session')">
+                        <i class="bi bi-clock-history"></i>
+                        <span>My Session</span>
                     </a>
-                    <a href="#" class="sidebar-item" onclick="showSection('deployment')">
-                        <i class="bi bi-server"></i>
-                        <span>Deployment Info</span>
+                    <a href="#" class="sidebar-item" onclick="showSection('howto')">
+                        <i class="bi bi-question-circle"></i>
+                        <span>How It Works</span>
                     </a>
                 </nav>
                 <div class="sidebar-footer">
@@ -85,8 +96,8 @@
         <!-- Main Content Area -->
         <main class="main-content" id="mainContent">
 
-            <!-- Dashboard Section -->
-            <div id="section-dashboard" class="content-section active">
+            <!-- Home Section -->
+            <div id="section-home" class="content-section active">
                 <!-- Hero Section -->
                 <div class="aws-card mb-4" style="background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-info) 100%); border: none;">
                     <div class="card-body text-center py-5">
@@ -534,6 +545,59 @@
         </div>
     </div>
 
+    <!-- Report Issue/Feedback Modal -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-bug me-2"></i>Report Issue / Send Feedback</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Found a bug or have a suggestion? Send us a message and we'll get back to you via email!</p>
+
+                    <form id="reportForm">
+                        <div class="mb-3">
+                            <label for="reportEmail" class="form-label">Your Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="reportEmail" placeholder="your.email@example.com" required>
+                            <small class="text-muted">We'll use this to respond to you</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reportType" class="form-label">Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="reportType" required>
+                                <option value="">Select type...</option>
+                                <option value="bug">🐛 Bug Report</option>
+                                <option value="feature">💡 Feature Request</option>
+                                <option value="feedback">💬 General Feedback</option>
+                                <option value="question">❓ Question</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reportMessage" class="form-label">Message <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="reportMessage" rows="5" placeholder="Describe your issue or feedback..." required></textarea>
+                            <small class="text-muted"><span id="charCount">0</span>/500 characters</small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <small>This will send a notification to the developer via AWS SNS</small>
+                        </div>
+
+                        <div id="reportStatus"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitReport()">
+                        <i class="bi bi-send me-2"></i>Send Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -543,5 +607,6 @@
 
     <!-- Custom JS -->
     <script src="script.js"></script>
+    <script src="report-system.js"></script>
 </body>
 </html>

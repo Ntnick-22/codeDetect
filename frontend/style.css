@@ -17,10 +17,10 @@
     --border-color: #e9ecef;
     --border-dark: #dee2e6;
 
-    /* Text - Dark grays */
-    --text-primary: #1a1a1a;
-    --text-secondary: #6c757d;
-    --text-muted: #adb5bd;
+    /* Text - Darker for better readability */
+    --text-primary: #0f172a;          /* Much darker, easier to read */
+    --text-secondary: #475569;        /* Darker secondary text */
+    --text-muted: #94a3b8;            /* Softer muted text */
 
     /* Accent Colors - Vibrant but not overwhelming */
     --accent-primary: #6366f1;        /* Indigo - modern, professional */
