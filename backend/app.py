@@ -391,6 +391,63 @@ def get_history():
 
 
 
+@app.route('/api/report', methods=['POST'])
+def submit_report():
+    """Handle user feedback/bug reports via AWS SNS"""
+    try:
+        data = request.get_json()
+        report_type = data.get('type', 'unknown')
+        message = data.get('message', '')
+        timestamp = data.get('timestamp', datetime.now().isoformat())
+        user_agent = data.get('user_agent', 'unknown')
+
+        # Validation
+        if not report_type or not message:
+            return jsonify({'error': 'Type and message are required'}), 400
+
+        # Prepare SNS message
+        sns_message = f"""
+CodeDetect Feedback Report
+==========================
+
+Type: {report_type}
+Time: {timestamp}
+User Agent: {user_agent}
+
+Message:
+{message}
+        """
+
+        # Send to SNS
+        try:
+            sns = boto3.client('sns', region_name='eu-west-1')
+            topic_arn = os.environ.get('SNS_TOPIC_ARN')
+
+            if not topic_arn:
+                print("⚠️ SNS_TOPIC_ARN not configured")
+                return jsonify({'error': 'SNS not configured'}), 500
+
+            response = sns.publish(
+                TopicArn=topic_arn,
+                Subject=f'CodeDetect: {report_type.upper()} Report',
+                Message=sns_message
+            )
+
+            print(f"✅ SNS notification sent: {response['MessageId']}")
+            return jsonify({
+                'success': True,
+                'message': 'Report sent successfully'
+            }), 200
+
+        except Exception as e:
+            print(f"❌ SNS Error: {e}")
+            return jsonify({'error': 'Failed to send notification'}), 500
+
+    except Exception as e:
+        print(f"❌ Report submission error: {e}")
+        return jsonify({'error': 'Failed to process report'}), 500
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Get overall statistics for dashboard trends"""

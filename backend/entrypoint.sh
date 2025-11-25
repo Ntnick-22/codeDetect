@@ -100,6 +100,12 @@ if aws sts get-caller-identity &>/dev/null; then
         export FLASK_ENV="$FLASK_ENVIRONMENT"
     fi
 
+    # Fetch SNS Topic ARN for user feedback
+    SNS_ARN=$(get_parameter "$PROJECT_NAME-$APP_ENV-sns-feedback-topic-arn")
+    if [ -n "$SNS_ARN" ]; then
+        export SNS_TOPIC_ARN="$SNS_ARN"
+    fi
+
     echo "✅ Secrets loaded successfully"
 else
     echo "⚠️  Not running in AWS - using environment variables"
@@ -136,6 +142,7 @@ echo "   - Environment: ${FLASK_ENV:-not set}"
 echo "   - S3 Bucket: ${S3_BUCKET_NAME:-not set}"
 echo "   - Database: ${DATABASE_URL:-not set}"
 echo "   - Secret Key: ${SECRET_KEY:+***configured***}"  # Only show if set
+echo "   - SNS Topic: ${SNS_TOPIC_ARN:+***configured***}"
 echo "   - AWS Region: $AWS_REGION"
 
 # ----------------------------------------------------------------------------
