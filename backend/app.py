@@ -326,16 +326,30 @@ def health_check():
 @app.route('/api/info', methods=['GET'])
 def app_info():
     """Application information endpoint - shows deployment details"""
+    # Get deployment info from environment variables (injected by GitHub Actions/Terraform)
+    docker_tag = os.environ.get('DOCKER_TAG', 'unknown')
+    deployment_time = os.environ.get('DEPLOYMENT_TIME', 'unknown')
+    git_commit = os.environ.get('GIT_COMMIT', 'unknown')
+    deployed_by = os.environ.get('DEPLOYED_BY', 'manual')
+    active_env = os.environ.get('ACTIVE_ENVIRONMENT', 'unknown')
+
     return jsonify({
-        'version': '2.1.0-ha',
-        'deployment_date': '2025-11-06',
+        'version': docker_tag,
+        'deployment': {
+            'docker_tag': docker_tag,
+            'deployed_at': deployment_time,
+            'git_commit': git_commit,
+            'deployed_by': deployed_by,
+            'active_environment': active_env,
+            'instance_id': os.environ.get('INSTANCE_ID', 'unknown')
+        },
         'features': [
             'AWS Parameter Store integration',
             'CloudWatch monitoring',
             'High Availability with Load Balancer',
             'Auto Scaling (2-4 instances)',
             'Automatic failover and self-healing',
-            'Zero-downtime deployment',
+            'Zero-downtime Blue/Green deployment',
             'Secure secrets management'
         ],
         'security': {
@@ -345,9 +359,9 @@ def app_info():
             's3_bucket_configured': bool(os.environ.get('S3_BUCKET_NAME'))
         },
         'environment': {
-            'flask_env': os.environ.get('FLASK_ENV', 'not set'),
+            'flask_env': os.environ.get('FLASK_ENV', 'prod'),
             's3_bucket': os.environ.get('S3_BUCKET_NAME', 'not set'),
-            'aws_region': os.environ.get('AWS_REGION', 'not set')
+            'aws_region': os.environ.get('AWS_REGION', 'eu-west-1')
         },
         'timestamp': datetime.now().isoformat()
     }), 200

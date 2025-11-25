@@ -732,10 +732,71 @@ function showSection(sectionName) {
     if (sectionName === 'dashboard') {
         updateDashboardStats();
     }
+
+    // Load deployment info when deployment section is opened
+    if (sectionName === 'deployment') {
+        loadDeploymentInfo();
+    }
 }
 
-// Make showSection global
+// Load deployment information from API
+async function loadDeploymentInfo() {
+    try {
+        const response = await fetch('/api/info');
+        if (!response.ok) throw new Error('Failed to fetch deployment info');
+
+        const data = await response.json();
+
+        // Update deployment information
+        document.getElementById('docker-tag').innerHTML =
+            `<code class="text-primary">${data.deployment?.docker_tag || 'unknown'}</code>`;
+
+        // Format deployment time
+        const deployedAt = data.deployment?.deployed_at || 'unknown';
+        const formattedTime = deployedAt !== 'unknown' ?
+            new Date(deployedAt).toLocaleString() : 'unknown';
+        document.getElementById('deployed-at').textContent = formattedTime;
+
+        document.getElementById('git-commit').innerHTML =
+            `<code>${data.deployment?.git_commit || 'unknown'}</code>`;
+
+        // Environment badge with color
+        const env = data.deployment?.active_environment || 'unknown';
+        const envBadge = env === 'blue' ?
+            `<span class="badge bg-primary">${env.toUpperCase()}</span>` :
+            env === 'green' ?
+            `<span class="badge bg-success">${env.toUpperCase()}</span>` :
+            `<span class="badge bg-secondary">${env.toUpperCase()}</span>`;
+        document.getElementById('active-env').innerHTML = envBadge;
+
+        document.getElementById('instance-id').innerHTML =
+            `<code class="text-muted">${data.deployment?.instance_id || 'unknown'}</code>`;
+
+        // Deployed by with icon
+        const deployedBy = data.deployment?.deployed_by || 'manual';
+        const deployIcon = deployedBy === 'github-actions' ?
+            '<i class="bi bi-github me-1"></i>' : '<i class="bi bi-person me-1"></i>';
+        document.getElementById('deployed-by').innerHTML =
+            `${deployIcon}${deployedBy}`;
+
+    } catch (error) {
+        console.error('Error loading deployment info:', error);
+        // Show error state
+        ['docker-tag', 'deployed-at', 'git-commit', 'active-env', 'instance-id', 'deployed-by'].forEach(id => {
+            document.getElementById(id).innerHTML =
+                '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error</span>';
+        });
+    }
+}
+
+// Refresh deployment info
+function refreshDeploymentInfo() {
+    loadDeploymentInfo();
+}
+
+// Make functions global
 window.showSection = showSection;
+window.refreshDeploymentInfo = refreshDeploymentInfo;
 
 // Sidebar toggle for mobile
 document.addEventListener('DOMContentLoaded', () => {
@@ -753,6 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial data
     loadHistory();
     updateDashboardStats();
+    loadVersionBadge();
 
     // Download button
     const downloadBtn = document.getElementById('downloadBtn');
@@ -765,6 +827,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
+
+// Load version badge in top navigation
+async function loadVersionBadge() {
+    try {
+        const response = await fetch('/api/info');
+        if (!response.ok) throw new Error('Failed to fetch version');
+
+        const data = await response.json();
+        const versionText = document.getElementById('version-text');
+
+        if (versionText && data.deployment?.docker_tag) {
+            versionText.textContent = data.deployment.docker_tag;
+        } else if (versionText) {
+            versionText.textContent = 'unknown';
+        }
+    } catch (error) {
+        console.error('Error loading version:', error);
+        const versionText = document.getElementById('version-text');
+        if (versionText) {
+            versionText.textContent = 'error';
+        }
+    }
+}
 
 
 // Update dashboard statistics

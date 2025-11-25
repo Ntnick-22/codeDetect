@@ -175,6 +175,31 @@ locals {
     fi
     # ========================================================================
 
+    # ========================================================================
+    # SET DEPLOYMENT INFO ENVIRONMENT VARIABLES
+    # ========================================================================
+    # Create environment file with deployment metadata
+    # These will be injected into Docker container for the /api/info endpoint
+    cat > /home/ec2-user/app/.env <<ENVFILE
+# Deployment Information
+DOCKER_TAG=${var.docker_tag}
+DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=$(echo ${var.docker_tag} | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
+DEPLOYED_BY=github-actions
+ACTIVE_ENVIRONMENT=${var.active_environment}
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
+
+# Application Configuration
+FLASK_ENV=prod
+S3_BUCKET_NAME=${var.s3_bucket_name}
+AWS_REGION=${var.aws_region}
+DATABASE_URL=/mnt/efs/database/codedetect.db
+ENVFILE
+
+    chown ec2-user:ec2-user /home/ec2-user/app/.env
+    echo "Environment variables configured" >> /var/log/codedetect-deploy.log
+    # ========================================================================
+
     # Now start application with EFS storage
     su - ec2-user -c "cd /home/ec2-user/app && docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
 

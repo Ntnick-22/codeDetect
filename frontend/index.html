@@ -26,6 +26,9 @@
                     </button>
                     <h5 class="mb-0 ms-3 text-white fw-bold">CodeDetect</h5>
                     <span class="badge bg-success ms-3">HA Deployed</span>
+                    <span class="badge bg-info ms-2" id="version-badge">
+                        <i class="bi bi-tag me-1"></i><span id="version-text">Loading...</span>
+                    </span>
                 </div>
                 <div class="d-flex align-items-center">
                     <span class="text-white-50 me-3"><i class="bi bi-geo-alt"></i> EU-West-1</span>
@@ -318,18 +321,20 @@
                     <div class="col-md-6">
                         <div class="aws-card">
                             <div class="card-header">
-                                <h5><i class="bi bi-link-45deg me-2"></i>Access Information</h5>
+                                <h5><i class="bi bi-rocket-takeoff me-2"></i>Deployment Information</h5>
                             </div>
                             <div class="card-body">
-                                <table class="table table-sm">
-                                    <tr><td><strong>Domain:</strong></td><td><a href="http://codedetect.nt-nick.link" target="_blank">codedetect.nt-nick.link</a></td></tr>
-                                    <tr><td><strong>SSL/TLS:</strong></td><td><span class="badge bg-success">Active</span></td></tr>
-                                    <tr><td><strong>Version:</strong></td><td>2.1.0-HA</td></tr>
-                                    <tr><td><strong>Health Check:</strong></td><td><span class="badge bg-success">Healthy</span></td></tr>
+                                <table class="table table-sm" id="deployment-info-table">
+                                    <tr><td><strong>Docker Tag:</strong></td><td id="docker-tag"><span class="spinner-border spinner-border-sm"></span></td></tr>
+                                    <tr><td><strong>Deployed At:</strong></td><td id="deployed-at"><span class="spinner-border spinner-border-sm"></span></td></tr>
+                                    <tr><td><strong>Git Commit:</strong></td><td id="git-commit"><span class="spinner-border spinner-border-sm"></span></td></tr>
+                                    <tr><td><strong>Environment:</strong></td><td id="active-env"><span class="spinner-border spinner-border-sm"></span></td></tr>
+                                    <tr><td><strong>Instance ID:</strong></td><td id="instance-id"><span class="spinner-border spinner-border-sm"></span></td></tr>
+                                    <tr><td><strong>Deployed By:</strong></td><td id="deployed-by"><span class="spinner-border spinner-border-sm"></span></td></tr>
                                 </table>
-                                <a href="http://codedetect.nt-nick.link" target="_blank" class="btn btn-primary btn-sm mt-2">
-                                    <i class="bi bi-box-arrow-up-right me-2"></i>Open Application
-                                </a>
+                                <button onclick="refreshDeploymentInfo()" class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                                </button>
                             </div>
                         </div>
                     </div>

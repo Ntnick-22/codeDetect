@@ -10,6 +10,8 @@ services:
     container_name: codedetect-app
     ports:
       - "80:5000"  # ALB forwards to port 80, Flask app runs on 5000
+    env_file:
+      - .env  # Load deployment metadata from .env file (created by Terraform)
     environment:
       - DATABASE_URL=sqlite:////app/instance/codedetect.db
       - FLASK_ENV=production
