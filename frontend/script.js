@@ -660,44 +660,93 @@ https://github.com/Ntnick-22/codeDetect
     window.URL.revokeObjectURL(url);
 }
 
-// Load analysis history
-async function loadHistory() {
+// Load anonymous analytics
+async function loadAnalytics() {
     try {
-        const response = await fetch('/api/history');
+        const response = await fetch('/api/stats');
         const data = await response.json();
 
-        const historyList = document.getElementById('historyList');
-        if (!historyList) return;
+        // Update metric cards
+        document.getElementById('total-analyses').textContent = data.total_analyses || 0;
+        document.getElementById('avg-score').textContent = data.avg_score ? data.avg_score.toFixed(1) : '0.0';
+        document.getElementById('total-security').textContent = data.total_security_issues || 0;
+        document.getElementById('total-quality').textContent = data.total_quality_issues || 0;
 
-        if (data && data.length > 0) {
-            historyList.innerHTML = data.map(item => `
-                <div class="alert alert-secondary mb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>${item.filename}</strong>
-                            <br>
-                            <small class="text-muted">${new Date(item.timestamp).toLocaleString()}</small>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge ${item.score >= 80 ? 'bg-success' : item.score >= 50 ? 'bg-warning' : 'bg-danger'}" style="font-size: 16px;">
-                                ${item.score}
-                            </span>
-                            <br>
-                            <small>Issues: ${item.total_issues} | Security: ${item.security_issues}</small>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            historyList.innerHTML = '<p class="text-muted text-center">No analysis history yet. Upload a file to get started!</p>';
+        // Update trends chart
+        if (data.trend_data && data.trend_data.length > 0) {
+            createTrendsChart(data.trend_data);
         }
     } catch (error) {
-        console.error('Failed to load history:', error);
-        const historyList = document.getElementById('historyList');
-        if (historyList) {
-            historyList.innerHTML = '<p class="text-danger text-center">Failed to load history. Please try again.</p>';
-        }
+        console.error('Failed to load analytics:', error);
+        document.getElementById('total-analyses').textContent = 'Error';
+        document.getElementById('avg-score').textContent = 'Error';
+        document.getElementById('total-security').textContent = 'Error';
+        document.getElementById('total-quality').textContent = 'Error';
     }
+}
+
+// Create trends chart
+function createTrendsChart(trendData) {
+    const ctx = document.getElementById('trendsChart');
+    if (!ctx) return;
+
+    // Destroy existing chart if any
+    if (window.trendsChartInstance) {
+        window.trendsChartInstance.destroy();
+    }
+
+    window.trendsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.label),
+            datasets: [{
+                label: 'Quality Score',
+                data: trendData.map(d => d.score),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const dataIndex = context.dataIndex;
+                            const data = trendData[dataIndex];
+                            return [
+                                `Total Issues: ${data.total_issues}`,
+                                `Security Issues: ${data.security_issues}`,
+                                `Complexity Issues: ${data.complexity_issues}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Quality Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Recent Analyses (Anonymous)'
+                    }
+                }
+            }
+        }
+    });
 }
 
 // ============================================
@@ -723,9 +772,9 @@ function showSection(sectionName) {
     });
     event.target.closest('.sidebar-item')?.classList.add('active');
 
-    // Load history when history section is opened
-    if (sectionName === 'history') {
-        loadHistory();
+    // Load analytics when analytics section is opened
+    if (sectionName === 'analytics') {
+        loadAnalytics();
     }
 
     // Update dashboard stats when dashboard is opened
@@ -812,9 +861,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load initial data
-    loadHistory();
     updateDashboardStats();
     loadVersionBadge();
+    // Note: Analytics loaded when analytics section is opened
 
     // Download button
     const downloadBtn = document.getElementById('downloadBtn');

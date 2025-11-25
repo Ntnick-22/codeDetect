@@ -62,9 +62,9 @@
                         <i class="bi bi-cloud-upload"></i>
                         <span>Upload & Analyze</span>
                     </a>
-                    <a href="#" class="sidebar-item" onclick="showSection('history')">
-                        <i class="bi bi-clock-history"></i>
-                        <span>Analysis History</span>
+                    <a href="#" class="sidebar-item" onclick="showSection('analytics')">
+                        <i class="bi bi-bar-chart"></i>
+                        <span>Analytics</span>
                     </a>
                     <a href="#" class="sidebar-item" onclick="showSection('deployment')">
                         <i class="bi bi-server"></i>
@@ -278,18 +278,68 @@
                 </div>
             </div>
 
-            <!-- History Section -->
-            <div id="section-history" class="content-section">
+            <!-- Analytics Section -->
+            <div id="section-analytics" class="content-section">
                 <div class="content-header">
-                    <h2><i class="bi bi-clock-history me-2"></i>Analysis History</h2>
-                    <p class="text-muted">View your past code analysis results</p>
+                    <h2><i class="bi bi-bar-chart me-2"></i>Platform Analytics</h2>
+                    <p class="text-muted">Aggregate statistics from all code analyses (privacy-first, anonymous data)</p>
                 </div>
-                <div class="aws-card">
-                    <div class="card-body">
-                        <div id="historyList">
-                            <p class="text-muted">Loading analysis history...</p>
+
+                <!-- Key Metrics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="aws-card">
+                            <div class="card-body text-center">
+                                <i class="bi bi-file-code display-4 text-primary"></i>
+                                <h3 class="mt-3 mb-0" id="total-analyses">-</h3>
+                                <p class="text-muted mb-0">Total Analyses</p>
+                            </div>
                         </div>
                     </div>
+                    <div class="col-md-3">
+                        <div class="aws-card">
+                            <div class="card-body text-center">
+                                <i class="bi bi-star display-4 text-success"></i>
+                                <h3 class="mt-3 mb-0" id="avg-score">-</h3>
+                                <p class="text-muted mb-0">Avg Quality Score</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="aws-card">
+                            <div class="card-body text-center">
+                                <i class="bi bi-shield-exclamation display-4 text-danger"></i>
+                                <h3 class="mt-3 mb-0" id="total-security">-</h3>
+                                <p class="text-muted mb-0">Security Issues</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="aws-card">
+                            <div class="card-body text-center">
+                                <i class="bi bi-bug display-4 text-warning"></i>
+                                <h3 class="mt-3 mb-0" id="total-quality">-</h3>
+                                <p class="text-muted mb-0">Quality Issues</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trends Chart -->
+                <div class="aws-card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-graph-up me-2"></i>Quality Trends (Last 10 Analyses)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trendsChart" height="80"></canvas>
+                    </div>
+                </div>
+
+                <!-- Privacy Notice -->
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-shield-check me-2"></i>
+                    <strong>Privacy First:</strong> All data is anonymous. We don't store filenames or code content.
+                    Only aggregate statistics are tracked to improve the platform.
                 </div>
             </div>
 

@@ -46,22 +46,25 @@ db = SQLAlchemy(app)
 
 
 # ============================================================
-# Database Model
+# Database Model - Privacy-First (Anonymous Analytics)
 # ============================================================
+# We store only aggregate data, NO filenames or code content
+# This protects user privacy while allowing platform analytics
 class Analysis(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(255), nullable=False)
+    # Anonymous field - just for identification, not real filename
+    file_hash = db.Column(db.String(64), nullable=True)  # Changed from filename
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     score = db.Column(db.Integer, nullable=False)
     total_issues = db.Column(db.Integer, default=0)
     security_issues = db.Column(db.Integer, default=0)
     complexity_issues = db.Column(db.Integer, default=0)
-    analysis_data = db.Column(db.Text)
+    # DO NOT store full analysis_data (contains code)
+    # analysis_data = db.Column(db.Text)  # REMOVED for privacy
 
     def to_dict(self):
         return {
             'id': self.id,
-            'filename': self.filename,
             'timestamp': self.timestamp.isoformat(),
             'score': self.score,
             'total_issues': self.total_issues,
@@ -291,20 +294,26 @@ def analyze_code():
         except Exception as e:
             print(f"Failed to create presigned URL: {e}")
 
-        # Save to DB
+        # Save to DB (ANONYMOUS - no filename or code content)
+        # Only store aggregate stats for platform analytics
         try:
+            import hashlib
+            # Create anonymous hash (not tied to actual filename)
+            file_hash = hashlib.sha256(str(datetime.now().timestamp()).encode()).hexdigest()[:16]
+
             new_analysis = Analysis(
-                filename=filename,
+                file_hash=file_hash,  # Anonymous identifier
                 score=score,
                 total_issues=len(pylint_results),
                 security_issues=len(bandit_results),
-                complexity_issues=response['summary']['high_complexity_functions'],
-                analysis_data=json.dumps(response)
+                complexity_issues=response['summary']['high_complexity_functions']
+                # NO filename, NO analysis_data (privacy-first!)
             )
             db.session.add(new_analysis)
             db.session.commit()
+            print(f"✅ Anonymous analytics saved (hash: {file_hash})")
         except Exception as e:
-            print(f"Database save error: {e}")
+            print(f"⚠️ Database save error (non-critical): {e}")
 
         os.remove(filepath)  # cleanup local file
         return jsonify(response), 200
@@ -369,13 +378,15 @@ def app_info():
 
 @app.route('/api/history', methods=['GET'])
 def get_history():
-    try:
-        limit = request.args.get('limit', 5, type=int)
-        analyses = Analysis.query.order_by(
-            Analysis.timestamp.desc()).limit(limit).all()
-        return jsonify([analysis.to_dict() for analysis in analyses]), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    """
+    DEPRECATED - Removed for privacy
+    History is no longer available to protect user privacy
+    Use /api/stats for anonymous aggregate analytics instead
+    """
+    return jsonify({
+        'message': 'History feature removed for privacy protection',
+        'alternative': 'Use /api/stats for anonymous aggregate analytics'
+    }), 410  # 410 Gone - resource no longer available
 
 
 
@@ -406,14 +417,15 @@ def get_stats():
         total_quality = sum(a.total_issues for a in all_analyses)
 
         # Prepare trend data (last 10 in chronological order)
+        # Anonymous - no filenames for privacy
         trend_data = [{
-            'filename': a.filename[:20] + '...' if len(a.filename) > 20 else a.filename,
+            'label': f'Analysis #{i+1}',  # Anonymous label instead of filename
             'timestamp': a.timestamp.isoformat(),
             'score': a.score,
             'total_issues': a.total_issues,
             'security_issues': a.security_issues,
             'complexity_issues': a.complexity_issues
-        } for a in reversed(recent_analyses)]
+        } for i, a in enumerate(reversed(recent_analyses))]
 
         return jsonify({
             'total_analyses': total_analyses,
