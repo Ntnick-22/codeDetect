@@ -546,9 +546,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted">Found a bug or have a suggestion? Send us a message!</p>
+                    <p class="text-muted">Found a bug or have a suggestion? Send us a message and we'll get back to you!</p>
 
                     <form id="reportForm">
+                        <div class="mb-3">
+                            <label for="reportEmail" class="form-label">Your Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="reportEmail" placeholder="your.email@example.com" required>
+                            <small class="text-muted">We'll use this to respond to you</small>
+                        </div>
+
                         <div class="mb-3">
                             <label for="reportType" class="form-label">Type <span class="text-danger">*</span></label>
                             <select class="form-select" id="reportType" required>

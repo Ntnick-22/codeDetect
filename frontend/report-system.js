@@ -21,13 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Submit report via SNS
 async function submitReport() {
+    const email = document.getElementById('reportEmail').value.trim();
     const type = document.getElementById('reportType').value;
     const message = document.getElementById('reportMessage').value.trim();
     const statusDiv = document.getElementById('reportStatus');
 
     // Validation
-    if (!type || !message) {
+    if (!email || !type || !message) {
         statusDiv.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>Please fill in all fields</div>';
+        return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        statusDiv.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>Please enter a valid email address</div>';
         return;
     }
 
@@ -41,6 +49,7 @@ async function submitReport() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                email: email,
                 type: type,
                 message: message,
                 timestamp: new Date().toISOString(),

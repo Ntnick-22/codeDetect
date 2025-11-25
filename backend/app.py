@@ -396,26 +396,31 @@ def submit_report():
     """Handle user feedback/bug reports via AWS SNS"""
     try:
         data = request.get_json()
+        email = data.get('email', '')
         report_type = data.get('type', 'unknown')
         message = data.get('message', '')
         timestamp = data.get('timestamp', datetime.now().isoformat())
         user_agent = data.get('user_agent', 'unknown')
 
         # Validation
-        if not report_type or not message:
-            return jsonify({'error': 'Type and message are required'}), 400
+        if not email or not report_type or not message:
+            return jsonify({'error': 'Email, type and message are required'}), 400
 
         # Prepare SNS message
         sns_message = f"""
 CodeDetect Feedback Report
 ==========================
 
+From: {email}
 Type: {report_type}
 Time: {timestamp}
 User Agent: {user_agent}
 
 Message:
 {message}
+
+---
+Reply to: {email}
         """
 
         # Send to SNS
