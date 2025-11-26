@@ -347,8 +347,11 @@ resource "aws_iam_role_policy" "ec2_ssm_access" {
           "ssm:GetParametersByPath"  # Read all parameters under a path
         ]
         # Restrict to only our project's parameters
-        # Format: /codedetect/prod/*
-        Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.app_name}/${var.environment}/*"
+        # Supports both hierarchical (/codedetect/prod/*) and flat (codedetect-prod-*) naming
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.app_name}/${var.environment}/*",
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.app_name}-${var.environment}-*"
+        ]
       },
       {
         Effect = "Allow"
