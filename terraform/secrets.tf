@@ -226,6 +226,30 @@ resource "aws_ssm_parameter" "flask_env" {
 # Total cost for this setup: $0.00/month 🎉
 
 # ----------------------------------------------------------------------------
+# SSM PARAMETER 5: SNS Topic ARN for User Feedback
+# ----------------------------------------------------------------------------
+
+# WHAT: SNS topic ARN for user feedback/bug reports
+# WHY: Application needs this to publish feedback messages
+# The app reads this from environment variable: SNS_TOPIC_ARN
+
+resource "aws_ssm_parameter" "sns_feedback_topic_arn" {
+  name        = "/${local.app_name}/${var.environment}/sns/feedback-topic-arn"
+  description = "SNS Topic ARN for user feedback and bug reports"
+  type        = "String"
+  value       = aws_sns_topic.user_feedback.arn # From sns.tf
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name        = "${local.name_prefix}-sns-feedback-arn"
+      Type        = "Config"
+      Application = "SNS"
+    }
+  )
+}
+
+# ----------------------------------------------------------------------------
 # NEXT STEPS AFTER APPLYING
 # ----------------------------------------------------------------------------
 

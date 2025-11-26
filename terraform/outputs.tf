@@ -200,6 +200,11 @@ output "sns_topic_arn" {
   value       = aws_sns_topic.alerts.arn
 }
 
+output "sns_feedback_topic_arn" {
+  description = "ARN of SNS topic for user feedback"
+  value       = aws_sns_topic.user_feedback.arn
+}
+
 output "notification_email" {
   description = "Email address receiving alerts"
   value       = var.notification_email
