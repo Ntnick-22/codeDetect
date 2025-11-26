@@ -328,6 +328,7 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'CodeDetect API',
+        'version': '1.1.0',
         'timestamp': datetime.now().isoformat()
     }), 200
 
