@@ -101,9 +101,13 @@ if aws sts get-caller-identity &>/dev/null; then
     fi
 
     # Fetch SNS Topic ARN for user feedback
+    echo "   Fetching SNS Topic ARN..."
     SNS_ARN=$(get_parameter "$PROJECT_NAME-$APP_ENV-sns-feedback-topic-arn")
     if [ -n "$SNS_ARN" ]; then
         export SNS_TOPIC_ARN="$SNS_ARN"
+        echo "   ✅ SNS_TOPIC_ARN configured: ${SNS_ARN:0:50}..."
+    else
+        echo "   ❌ WARNING: SNS_TOPIC_ARN not loaded from Parameter Store!"
     fi
 
     echo "✅ Secrets loaded successfully"
