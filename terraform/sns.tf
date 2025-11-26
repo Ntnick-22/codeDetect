@@ -68,7 +68,7 @@ resource "aws_sns_topic_policy" "user_feedback_policy" {
         Sid    = "AllowEC2Publish"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.ec2_role.arn # EC2 role from ec2.tf
+          AWS = aws_iam_role.ec2.arn # EC2 role from ec2.tf:274
         }
         Action = [
           "sns:Publish"
