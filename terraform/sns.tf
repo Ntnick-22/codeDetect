@@ -101,7 +101,8 @@ resource "aws_sns_topic_policy" "user_feedback_policy" {
 # DATA SOURCE - Get Current AWS Account Info
 # ----------------------------------------------------------------------------
 
-data "aws_caller_identity" "current" {}
+# Note: aws_caller_identity "current" is already defined in main.tf:81
+# We reuse that data source here for the topic policy
 
 # ============================================================================
 # WHY THIS FIXES YOUR UNSUBSCRIBE PROBLEM
