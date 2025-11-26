@@ -238,6 +238,7 @@ resource "aws_ssm_parameter" "sns_feedback_topic_arn" {
   description = "SNS Topic ARN for user feedback and bug reports"
   type        = "String"
   value       = aws_sns_topic.user_feedback.arn # From sns.tf
+  overwrite   = true # Allow updating existing parameter
 
   tags = merge(
     local.common_tags,
