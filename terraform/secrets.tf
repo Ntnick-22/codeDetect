@@ -234,7 +234,7 @@ resource "aws_ssm_parameter" "flask_env" {
 # The app reads this from environment variable: SNS_TOPIC_ARN
 
 resource "aws_ssm_parameter" "sns_feedback_topic_arn" {
-  name        = "/${local.app_name}/${var.environment}/sns/feedback-topic-arn"
+  name        = "${local.app_name}-${var.environment}-sns-feedback-topic-arn"
   description = "SNS Topic ARN for user feedback and bug reports"
   type        = "String"
   value       = aws_sns_topic.user_feedback.arn # From sns.tf
