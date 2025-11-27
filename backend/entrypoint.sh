@@ -110,6 +110,16 @@ if aws sts get-caller-identity &>/dev/null; then
         echo "   ❌ WARNING: SNS_TOPIC_ARN not loaded from Parameter Store!"
     fi
 
+    # Fetch Database Password for PostgreSQL
+    echo "   Fetching database password..."
+    DB_PASS=$(get_parameter "$PROJECT_NAME-$APP_ENV-db-password")
+    if [ -n "$DB_PASS" ]; then
+        export DB_PASSWORD="$DB_PASS"
+        echo "   ✅ DB_PASSWORD configured"
+    else
+        echo "   ❌ WARNING: DB_PASSWORD not loaded from Parameter Store!"
+    fi
+
     echo "✅ Secrets loaded successfully"
 else
     echo "⚠️  Not running in AWS - using environment variables"
