@@ -137,16 +137,35 @@ def run_pylint(filepath):
 def run_bandit(filepath):
     """Run Bandit security analysis"""
     try:
+        # Bandit returns exit code 1 when issues found - this is NORMAL!
+        # Don't treat it as an error
         result = subprocess.run(
             ['bandit', filepath, '-f', 'json'],
-            capture_output=True, text=True, timeout=30
+            capture_output=True, text=True, timeout=30,
+            check=False  # Don't raise exception on non-zero exit code
         )
+
+        # Parse JSON output
         if result.stdout:
-            data = json.loads(result.stdout)
-            return data.get('results', [])
+            try:
+                data = json.loads(result.stdout)
+                issues = data.get('results', [])
+                print(f"✅ Bandit found {len(issues)} security issues")
+                return issues
+            except json.JSONDecodeError as e:
+                print(f"⚠️ Bandit JSON parse error: {e}")
+                print(f"Raw output: {result.stdout[:500]}")
+                return []
+
+        # Check stderr for errors
+        if result.stderr:
+            print(f"Bandit stderr: {result.stderr}")
+
         return []
     except Exception as e:
-        print(f"Bandit error: {e}")
+        print(f"❌ Bandit error: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 
