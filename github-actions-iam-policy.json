@@ -143,6 +143,14 @@
         "arn:aws:s3:::codedetect-uploads",
         "arn:aws:s3:::codedetect-uploads/*"
       ]
+    },
+    {
+      "Sid": "RDSFullAccess",
+      "Effect": "Allow",
+      "Action": [
+        "rds:*"
+      ],
+      "Resource": "*"
     }
   ]
 }
