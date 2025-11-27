@@ -522,12 +522,31 @@ body {
 .dropdown-menu {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem 0;
+    min-width: 220px;
+}
+
+.dropdown-header {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 1rem 0.25rem 1rem;
 }
 
 .dropdown-item {
     color: var(--text-primary);
     transition: var(--transition);
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
 }
 
 .dropdown-item:hover {
@@ -535,8 +554,14 @@ body {
     color: var(--accent-primary);
 }
 
+.dropdown-item:active {
+    background: rgba(255, 153, 0, 0.2);
+    color: var(--accent-primary);
+}
+
 .dropdown-divider {
     border-color: var(--border-color);
+    margin: 0.5rem 0;
 }
 
 /* ============================================
