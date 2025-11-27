@@ -248,11 +248,19 @@ output "rds_port" {
   value       = var.use_rds ? aws_db_instance.postgres[0].port : 5432
 }
 
-output "database_url" {
-  description = "Full PostgreSQL connection string for application"
-  value       = var.use_rds ? "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres[0].endpoint}/${var.db_name}" : "sqlite:///codedetect.db"
-  sensitive   = true # Hide from terminal output (contains password)
+output "database_name" {
+  description = "RDS database name"
+  value       = var.use_rds ? var.db_name : "codedetect"
 }
+
+output "database_username" {
+  description = "RDS database username"
+  value       = var.use_rds ? var.db_username : "codedetect"
+}
+
+# Note: database_url output removed due to Terraform limitation
+# Sensitive variables (db_password) cannot be used in conditional expressions
+# The connection string is constructed in EC2 user data instead
 
 # ============================================================================
 # COST ESTIMATE
