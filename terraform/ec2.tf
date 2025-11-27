@@ -178,6 +178,26 @@ locals {
     # ========================================================================
     # SET DEPLOYMENT INFO ENVIRONMENT VARIABLES
     # ========================================================================
+    # Fetch secrets from AWS Parameter Store
+    # ========================================================================
+    echo "Fetching secrets from Parameter Store..." >> /var/log/codedetect-deploy.log
+
+    # Fetch database password
+    DB_PASSWORD=$(aws ssm get-parameter \
+      --name "codedetect-prod-db-password" \
+      --with-decryption \
+      --region ${var.aws_region} \
+      --query 'Parameter.Value' \
+      --output text 2>/dev/null || echo "")
+
+    if [ -z "$DB_PASSWORD" ]; then
+      echo "ERROR: Failed to fetch DB_PASSWORD from Parameter Store" >> /var/log/codedetect-deploy.log
+      DB_PASSWORD="codedetect_secure_pass_2025"  # Fallback (for dev only)
+    else
+      echo "Successfully fetched DB_PASSWORD" >> /var/log/codedetect-deploy.log
+    fi
+
+    # ========================================================================
     # Create environment file with deployment metadata
     # These will be injected into Docker container for the /api/info endpoint
     cat > /home/ec2-user/app/.env <<ENVFILE
@@ -193,11 +213,15 @@ INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
 FLASK_ENV=prod
 S3_BUCKET_NAME=${var.s3_bucket_name}
 AWS_REGION=${var.aws_region}
-DATABASE_URL=/mnt/efs/database/codedetect.db
+
+# Database Configuration
+# PostgreSQL running in Docker (not SQLite anymore!)
+# The DATABASE_URL will be constructed by docker-compose.yml
+DB_PASSWORD=$DB_PASSWORD
 ENVFILE
 
     chown ec2-user:ec2-user /home/ec2-user/app/.env
-    echo "Environment variables configured" >> /var/log/codedetect-deploy.log
+    echo "Environment variables configured (including DB_PASSWORD)" >> /var/log/codedetect-deploy.log
     # ========================================================================
 
     # Now start application with EFS storage
