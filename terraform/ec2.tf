@@ -221,7 +221,9 @@ locals {
     # ========================================================================
     # Create environment file with deployment metadata
     # These will be injected into Docker container for the /api/info endpoint
-    cat > /home/ec2-user/app/.env <<ENVFILE
+    %{if var.use_rds}
+    # Using RDS PostgreSQL
+    cat > /home/ec2-user/app/.env <<'ENVFILE'
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
 DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -235,19 +237,34 @@ FLASK_ENV=prod
 S3_BUCKET_NAME=${var.s3_bucket_name}
 AWS_REGION=${var.aws_region}
 
-# Database Configuration
-%{if var.use_rds}
-# AWS RDS PostgreSQL (production setup)
-RDS_ENDPOINT=$RDS_ENDPOINT
-RDS_ADDRESS=$RDS_ADDRESS
-DB_NAME=${var.db_name}
-DB_USERNAME=${var.db_username}
-DB_PASSWORD=$DB_PASSWORD
-%{else}
-# SQLite (local development only)
-# RDS variables not set - docker-compose will use SQLite
-%{endif}
+# Database Configuration - AWS RDS PostgreSQL
 ENVFILE
+
+    # Append RDS-specific variables (contains sensitive data)
+    echo "RDS_ENDPOINT=$RDS_ENDPOINT" >> /home/ec2-user/app/.env
+    echo "RDS_ADDRESS=$RDS_ADDRESS" >> /home/ec2-user/app/.env
+    echo "DB_NAME=${var.db_name}" >> /home/ec2-user/app/.env
+    echo "DB_USERNAME=${var.db_username}" >> /home/ec2-user/app/.env
+    echo "DB_PASSWORD=$DB_PASSWORD" >> /home/ec2-user/app/.env
+    %{else}
+    # Using SQLite (fallback)
+    cat > /home/ec2-user/app/.env <<'ENVFILE'
+# Deployment Information
+DOCKER_TAG=${var.docker_tag}
+DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=$(echo ${var.docker_tag} | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
+DEPLOYED_BY=github-actions
+ACTIVE_ENVIRONMENT=${var.active_environment}
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
+
+# Application Configuration
+FLASK_ENV=prod
+S3_BUCKET_NAME=${var.s3_bucket_name}
+AWS_REGION=${var.aws_region}
+
+# Database Configuration - SQLite (local development)
+ENVFILE
+    %{endif}
 
     chown ec2-user:ec2-user /home/ec2-user/app/.env
     echo "Environment variables configured" >> /var/log/codedetect-deploy.log
