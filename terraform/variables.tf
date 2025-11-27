@@ -140,7 +140,7 @@ variable "db_instance_class" {
 variable "db_engine_version" {
   description = "PostgreSQL engine version"
   type        = string
-  default     = "15.4" # Latest stable PostgreSQL version
+  default     = "15.10" # Latest stable PostgreSQL 15.x version available in AWS
 }
 
 # Database name
