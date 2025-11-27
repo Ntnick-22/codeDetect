@@ -1,5 +1,39 @@
 services:
   # =========================================================================
+  # POSTGRESQL DATABASE
+  # =========================================================================
+  # Production-grade database running in Docker
+  # - Stores user data, analysis results, authentication
+  # - Uses Docker volumes for data persistence (survives container restarts)
+  # - Shared by all EC2 instances via network
+  # - Free alternative to AWS RDS ($0 cost!)
+  db:
+    image: postgres:15-alpine  # Alpine = small image size (20MB vs 200MB)
+    container_name: codedetect-postgres
+    environment:
+      # PostgreSQL configuration
+      POSTGRES_DB: codedetect           # Database name
+      POSTGRES_USER: codedetect         # Username
+      POSTGRES_PASSWORD: ${DB_PASSWORD} # Password from .env file (secure!)
+    volumes:
+      # ===================================================================
+      # DATABASE STORAGE - Using EFS (shared across all instances)
+      # ===================================================================
+      # Maps EFS mount to PostgreSQL data directory
+      # This allows multiple EC2 instances to share the same database
+      # IMPORTANT: Only ONE instance should run PostgreSQL at a time
+      # (We'll use container name to ensure only active EC2 runs it)
+      - /mnt/efs/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # PostgreSQL default port (only accessible within VPC)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codedetect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
   # CODEDETECT APPLICATION
   # =========================================================================
   codedetect:
@@ -8,22 +42,20 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: codedetect-app
+    depends_on:
+      db:
+        condition: service_healthy  # Wait for PostgreSQL to be ready
     ports:
       - "80:5000"  # ALB forwards to port 80, Flask app runs on 5000
     env_file:
       - .env  # Load deployment metadata from .env file (created by Terraform)
     environment:
-      - DATABASE_URL=sqlite:////app/instance/codedetect.db
+      # Database connection string
+      # Format: postgresql://username:password@host:port/database
+      # 'db' = PostgreSQL container name (Docker DNS resolves this)
+      - DATABASE_URL=postgresql://codedetect:${DB_PASSWORD}@db:5432/codedetect
       - FLASK_ENV=production
     volumes:
-      # ===================================================================
-      # DATABASE STORAGE - Using EFS (shared across all instances)
-      # ===================================================================
-      # Maps EFS mount (/mnt/efs/database) to container (/app/instance)
-      # Both EC2 instances write to the same EFS location
-      # This solves the multi-instance database sync problem
-      - /mnt/efs/database:/app/instance
-
       # ===================================================================
       # FILE UPLOADS - Using EFS (shared across all instances)
       # ===================================================================
@@ -39,5 +71,12 @@ services:
       retries: 3
       start_period: 40s
 
-# NOTE: We use EFS for persistent data (database and uploads)
-# EFS provides shared storage that all instances can access simultaneously
+# ============================================================================
+# DOCKER VOLUMES
+# ============================================================================
+# Named volumes for data persistence
+# These survive container deletions and restarts
+# volumes:
+#   postgres_data:
+#     # This would create a local Docker volume
+#     # But we're using EFS instead for multi-instance support
