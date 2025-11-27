@@ -57,7 +57,7 @@ resource "aws_efs_backup_policy" "main" {
   file_system_id = aws_efs_file_system.main.id
 
   backup_policy {
-    status = "ENABLED"  # Set to "DISABLED" if you want to skip backups
+    status = "ENABLED" # Set to "DISABLED" if you want to skip backups
   }
 }
 
@@ -86,7 +86,7 @@ resource "aws_vpc_security_group_ingress_rule" "efs_from_ec2" {
 
   # Allow traffic from EC2 security group
   referenced_security_group_id = aws_security_group.ec2.id
-  from_port                    = 2049  # NFS port
+  from_port                    = 2049 # NFS port
   to_port                      = 2049
   ip_protocol                  = "tcp"
 

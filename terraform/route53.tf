@@ -11,9 +11,9 @@
 # Don't create a new one - just get the existing one
 
 data "aws_route53_zone" "main" {
-  count        = var.enable_dns ? 1 : 0  # Only lookup if DNS enabled
-  name         = var.domain_name # "nt-nick.link"
-  private_zone = false           # Public hosted zone (accessible from internet)
+  count        = var.enable_dns ? 1 : 0 # Only lookup if DNS enabled
+  name         = var.domain_name        # "nt-nick.link"
+  private_zone = false                  # Public hosted zone (accessible from internet)
 }
 
 # ----------------------------------------------------------------------------
@@ -24,7 +24,7 @@ data "aws_route53_zone" "main" {
 # Benefits: Free, better health checks, automatic IP updates
 
 resource "aws_route53_record" "app" {
-  count   = var.enable_dns ? 1 : 0  # Only create if DNS enabled
+  count   = var.enable_dns ? 1 : 0 # Only create if DNS enabled
   zone_id = data.aws_route53_zone.main[0].zone_id
   name    = var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
   type    = "A"

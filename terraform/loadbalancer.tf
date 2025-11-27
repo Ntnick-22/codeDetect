@@ -116,18 +116,18 @@ resource "aws_lb" "main" {
 # BLUE Target Group (Primary)
 resource "aws_lb_target_group" "blue" {
   name     = "${local.name_prefix}-blue-tg"
-  port     = 80  # Nginx reverse proxy
+  port     = 80 # Nginx reverse proxy
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
   # Health check configuration
   health_check {
     enabled             = true
-    healthy_threshold   = 2   # 2 successful checks = healthy
-    unhealthy_threshold = 3   # 3 failed checks = unhealthy
-    timeout             = 5   # 5 seconds to respond
-    interval            = 30  # Check every 30 seconds
-    path                = "/api/health"  # Nginx forwards to codedetect:5000/api/health
+    healthy_threshold   = 2             # 2 successful checks = healthy
+    unhealthy_threshold = 3             # 3 failed checks = unhealthy
+    timeout             = 5             # 5 seconds to respond
+    interval            = 30            # Check every 30 seconds
+    path                = "/api/health" # Nginx forwards to codedetect:5000/api/health
     protocol            = "HTTP"
     matcher             = "200" # Expect HTTP 200 response
   }
@@ -138,7 +138,7 @@ resource "aws_lb_target_group" "blue" {
   # Sticky sessions for session persistence
   stickiness {
     type            = "lb_cookie"
-    cookie_duration = 86400  # 24 hours
+    cookie_duration = 86400 # 24 hours
     enabled         = true
   }
 
@@ -159,7 +159,7 @@ resource "aws_lb_target_group" "blue" {
 # GREEN Target Group (Secondary/Deployment)
 resource "aws_lb_target_group" "green" {
   name     = "${local.name_prefix}-green-tg"
-  port     = 80  # Nginx reverse proxy
+  port     = 80 # Nginx reverse proxy
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
@@ -181,7 +181,7 @@ resource "aws_lb_target_group" "green" {
   # Sticky sessions
   stickiness {
     type            = "lb_cookie"
-    cookie_duration = 86400  # 24 hours
+    cookie_duration = 86400 # 24 hours
     enabled         = true
   }
 
@@ -218,8 +218,8 @@ resource "aws_lb_listener" "http" {
   tags = merge(
     local.common_tags,
     {
-      Name               = "${local.name_prefix}-http-listener"
-      ActiveEnvironment  = var.active_environment
+      Name              = "${local.name_prefix}-http-listener"
+      ActiveEnvironment = var.active_environment
     }
   )
 }
@@ -297,11 +297,11 @@ resource "aws_autoscaling_group" "blue" {
   name = "${local.name_prefix}-blue-asg"
 
   # Capacity configuration - controlled by active_environment variable
-  # If blue is active: 2-4 instances
+  # If blue is active: 1 instance (PostgreSQL can only run on one instance)
   # If green is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "blue" ? 2 : 0
-  max_size         = var.active_environment == "blue" ? 4 : 0
-  desired_capacity = var.active_environment == "blue" ? 2 : 0
+  min_size         = var.active_environment == "blue" ? 1 : 0
+  max_size         = var.active_environment == "blue" ? 2 : 0
+  desired_capacity = var.active_environment == "blue" ? 1 : 0
 
   # Health check configuration
   health_check_type         = "ELB" # Use load balancer health checks
@@ -364,11 +364,11 @@ resource "aws_autoscaling_group" "green" {
   name = "${local.name_prefix}-green-asg"
 
   # Capacity configuration - controlled by active_environment variable
-  # If green is active: 2-4 instances
+  # If green is active: 1 instance (PostgreSQL can only run on one instance)
   # If blue is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "green" ? 2 : 0
-  max_size         = var.active_environment == "green" ? 4 : 0
-  desired_capacity = var.active_environment == "green" ? 2 : 0
+  min_size         = var.active_environment == "green" ? 1 : 0
+  max_size         = var.active_environment == "green" ? 2 : 0
+  desired_capacity = var.active_environment == "green" ? 1 : 0
 
   # Health check configuration
   health_check_type         = "ELB"

@@ -1,37 +1,17 @@
 services:
   # =========================================================================
-  # POSTGRESQL DATABASE
+  # POSTGRESQL DATABASE - MOVED TO AWS RDS
   # =========================================================================
-  # Production-grade database running in Docker
-  # - Stores user data, analysis results, authentication
-  # - Uses Docker volumes for data persistence (survives container restarts)
-  # - Shared by all EC2 instances via network
-  # - Free alternative to AWS RDS ($0 cost!)
-  db:
-    image: postgres:15-alpine  # Alpine = small image size (20MB vs 200MB)
-    container_name: codedetect-postgres
-    environment:
-      # PostgreSQL configuration
-      POSTGRES_DB: codedetect           # Database name
-      POSTGRES_USER: codedetect         # Username
-      POSTGRES_PASSWORD: ${DB_PASSWORD} # Password from .env file (secure!)
-    volumes:
-      # ===================================================================
-      # DATABASE STORAGE - Using EFS (shared across all instances)
-      # ===================================================================
-      # Maps EFS mount to PostgreSQL data directory
-      # This allows multiple EC2 instances to share the same database
-      # IMPORTANT: Only ONE instance should run PostgreSQL at a time
-      # (We'll use container name to ensure only active EC2 runs it)
-      - /mnt/efs/postgres:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"  # PostgreSQL default port (only accessible within VPC)
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U codedetect"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # We now use AWS RDS PostgreSQL instead of Docker PostgreSQL
+  # Benefits:
+  # - Managed backups, updates, monitoring by AWS
+  # - Both EC2 instances connect to same RDS (true high availability)
+  # - Free for 12 months (db.t3.micro)
+  # - No PostgreSQL container conflicts
+  # - Production-ready architecture
+  #
+  # Connection configured via DATABASE_URL environment variable below
+  # =========================================================================
 
   # =========================================================================
   # CODEDETECT APPLICATION
@@ -42,9 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: codedetect-app
-    depends_on:
-      db:
-        condition: service_healthy  # Wait for PostgreSQL to be ready
+    # No depends_on needed - RDS is always running
     ports:
       - "80:5000"  # ALB forwards to port 80, Flask app runs on 5000
     env_file:
@@ -52,8 +30,9 @@ services:
     environment:
       # Database connection string
       # Format: postgresql://username:password@host:port/database
-      # 'db' = PostgreSQL container name (Docker DNS resolves this)
-      - DATABASE_URL=postgresql://codedetect:${DB_PASSWORD}@db:5432/codedetect
+      # RDS_ENDPOINT = RDS PostgreSQL hostname (fetched by EC2 user data script)
+      # Falls back to SQLite if RDS_ENDPOINT not set (for local development)
+      - DATABASE_URL=${RDS_ENDPOINT:+postgresql://${DB_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}/${DB_NAME}}${RDS_ENDPOINT:-sqlite:///codedetect.db}
       - FLASK_ENV=production
     volumes:
       # ===================================================================

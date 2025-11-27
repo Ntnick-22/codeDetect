@@ -405,9 +405,9 @@ resource "aws_cloudwatch_dashboard" "main" {
           metrics = [
             ["AWS/EC2", "CPUUtilization", "AutoScalingGroupName", local.active_asg_name, { stat = "Average" }]
           ]
-          period = 60
-          stat   = "Average"
-          view   = "singleValue"
+          period               = 60
+          stat                 = "Average"
+          view                 = "singleValue"
           setPeriodToTimeRange = true
         }
       },

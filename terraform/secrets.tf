@@ -30,7 +30,7 @@
 # If you don't set this, Flask uses a weak default or fails in production
 
 resource "random_password" "flask_secret" {
-  length  = 64  # Long enough for strong security
+  length  = 64   # Long enough for strong security
   special = true # Include special characters (!@#$%)
 
   # Keepers ensure new secret is generated only when we want
@@ -84,7 +84,7 @@ resource "aws_ssm_parameter" "flask_secret" {
 resource "aws_ssm_parameter" "s3_bucket" {
   name        = "/${local.app_name}/${var.environment}/s3/bucket_name"
   description = "S3 bucket name for file uploads"
-  type        = "String" # Not secret, so no encryption needed
+  type        = "String"                 # Not secret, so no encryption needed
   value       = aws_s3_bucket.uploads.id # Reference from s3.tf
 
   tags = merge(
@@ -112,7 +112,7 @@ resource "aws_ssm_parameter" "s3_bucket" {
 resource "aws_ssm_parameter" "database_url" {
   name        = "/${local.app_name}/${var.environment}/database/url"
   description = "Database connection URL"
-  type        = "SecureString" # Secure in case it contains password later
+  type        = "SecureString"                          # Secure in case it contains password later
   value       = "sqlite:////app/instance/codedetect.db" # Current SQLite path
 
   tags = merge(
@@ -238,7 +238,7 @@ resource "aws_ssm_parameter" "sns_feedback_topic_arn" {
   description = "SNS Topic ARN for user feedback and bug reports"
   type        = "String"
   value       = aws_sns_topic.user_feedback.arn # From sns.tf
-  overwrite   = true # Allow updating existing parameter
+  overwrite   = true                            # Allow updating existing parameter
 
   tags = merge(
     local.common_tags,

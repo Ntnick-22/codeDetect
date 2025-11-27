@@ -198,6 +198,27 @@ locals {
     fi
 
     # ========================================================================
+    # Fetch RDS endpoint (if RDS is enabled)
+    # ========================================================================
+    %{if var.use_rds}
+    echo "Fetching RDS endpoint from Terraform outputs..." >> /var/log/codedetect-deploy.log
+    RDS_ENDPOINT="${aws_db_instance.postgres[0].endpoint}"
+    RDS_ADDRESS="${aws_db_instance.postgres[0].address}"
+
+    if [ -z "$RDS_ENDPOINT" ]; then
+      echo "ERROR: RDS endpoint not found!" >> /var/log/codedetect-deploy.log
+      exit 1
+    fi
+
+    echo "RDS endpoint: $RDS_ENDPOINT" >> /var/log/codedetect-deploy.log
+    %{else}
+    echo "RDS not enabled - using SQLite" >> /var/log/codedetect-deploy.log
+    RDS_ENDPOINT=""
+    RDS_ADDRESS=""
+    %{endif}
+    # ========================================================================
+
+    # ========================================================================
     # Create environment file with deployment metadata
     # These will be injected into Docker container for the /api/info endpoint
     cat > /home/ec2-user/app/.env <<ENVFILE
@@ -215,16 +236,39 @@ S3_BUCKET_NAME=${var.s3_bucket_name}
 AWS_REGION=${var.aws_region}
 
 # Database Configuration
-# PostgreSQL running in Docker (not SQLite anymore!)
-# The DATABASE_URL will be constructed by docker-compose.yml
+%{if var.use_rds}
+# AWS RDS PostgreSQL (production setup)
+RDS_ENDPOINT=$RDS_ENDPOINT
+RDS_ADDRESS=$RDS_ADDRESS
+DB_NAME=${var.db_name}
+DB_USERNAME=${var.db_username}
 DB_PASSWORD=$DB_PASSWORD
+%{else}
+# SQLite (local development only)
+# RDS variables not set - docker-compose will use SQLite
+%{endif}
 ENVFILE
 
     chown ec2-user:ec2-user /home/ec2-user/app/.env
-    echo "Environment variables configured (including DB_PASSWORD)" >> /var/log/codedetect-deploy.log
+    echo "Environment variables configured" >> /var/log/codedetect-deploy.log
     # ========================================================================
 
-    # Now start application with EFS storage
+    # ========================================================================
+    # RDS SETUP - NO LOCK NEEDED
+    # ========================================================================
+    %{if var.use_rds}
+    # Using AWS RDS PostgreSQL
+    # - Both EC2 instances connect to same RDS database
+    # - No lock file needed (RDS handles concurrent connections)
+    # - No local PostgreSQL container running
+    echo "Using AWS RDS PostgreSQL - both instances will connect to same database" >> /var/log/codedetect-deploy.log
+    %{else}
+    # Using SQLite on EFS (not recommended for production)
+    echo "Using SQLite on EFS" >> /var/log/codedetect-deploy.log
+    %{endif}
+    # ========================================================================
+
+    # Now start application
     su - ec2-user -c "cd /home/ec2-user/app && docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
 
     echo "=== Deployment complete at $(date) ===" >> /var/log/codedetect-deploy.log
@@ -366,9 +410,9 @@ resource "aws_iam_role_policy" "ec2_ssm_access" {
       {
         Effect = "Allow"
         Action = [
-          "ssm:GetParameter",        # Read a single parameter
-          "ssm:GetParameters",       # Read multiple parameters at once
-          "ssm:GetParametersByPath"  # Read all parameters under a path
+          "ssm:GetParameter",       # Read a single parameter
+          "ssm:GetParameters",      # Read multiple parameters at once
+          "ssm:GetParametersByPath" # Read all parameters under a path
         ]
         # Restrict to only our project's parameters
         # Supports both hierarchical (/codedetect/prod/*) and flat (codedetect-prod-*) naming

@@ -214,12 +214,14 @@ jobs:
           if ! terraform plan \
             -var="active_environment=$TARGET_ENV" \
             -var="docker_tag=$DOCKER_TAG" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
             -out=tfplan; then
             echo "❌ Terraform plan failed!"
             echo "Showing detailed error logs..."
             terraform plan \
               -var="active_environment=$TARGET_ENV" \
               -var="docker_tag=$DOCKER_TAG" \
+              -var="db_password=${{ secrets.DB_PASSWORD }}" \
               -no-color
             exit 1
           fi

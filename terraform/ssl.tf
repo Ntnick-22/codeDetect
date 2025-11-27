@@ -13,9 +13,9 @@
 # Request a free SSL certificate from AWS Certificate Manager
 
 resource "aws_acm_certificate" "main" {
-  count             = var.enable_dns ? 1 : 0  # Only create if DNS enabled
-  domain_name       = "${var.subdomain}.${var.domain_name}"  # codedetect.nt-nick.link
-  validation_method = "DNS"                                   # Verify ownership via Route53
+  count             = var.enable_dns ? 1 : 0                # Only create if DNS enabled
+  domain_name       = "${var.subdomain}.${var.domain_name}" # codedetect.nt-nick.link
+  validation_method = "DNS"                                 # Verify ownership via Route53
 
   # Optional: Add wildcard for subdomains (e.g., api.codedetect.nt-nick.link)
   # subject_alternative_names = [
@@ -23,7 +23,7 @@ resource "aws_acm_certificate" "main" {
   # ]
 
   lifecycle {
-    create_before_destroy = true  # When renewing, create new cert before destroying old
+    create_before_destroy = true # When renewing, create new cert before destroying old
   }
 
   tags = merge(
@@ -68,7 +68,7 @@ resource "aws_acm_certificate_validation" "main" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 
   timeouts {
-    create = "15m"  # Wait up to 15 minutes for validation
+    create = "15m" # Wait up to 15 minutes for validation
   }
 }
 
@@ -78,17 +78,17 @@ resource "aws_acm_certificate_validation" "main" {
 # Add HTTPS listener to the Application Load Balancer
 
 resource "aws_lb_listener" "https" {
-  count             = var.enable_dns ? 1 : 0  # Only create if DNS enabled
+  count             = var.enable_dns ? 1 : 0 # Only create if DNS enabled
   load_balancer_arn = aws_lb.main.arn
   port              = "443"
   protocol          = "HTTPS"
 
   # SSL policy - defines which encryption protocols to use
   # ELBSecurityPolicy-2016-08 is a good balance of security and compatibility
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  ssl_policy = "ELBSecurityPolicy-2016-08"
 
   # Attach our SSL certificate
-  certificate_arn   = aws_acm_certificate_validation.main[0].certificate_arn
+  certificate_arn = aws_acm_certificate_validation.main[0].certificate_arn
 
   # Blue/Green Deployment: Forward traffic to active environment
   # This uses the active_environment variable to determine which target group receives traffic
@@ -100,8 +100,8 @@ resource "aws_lb_listener" "https" {
   tags = merge(
     local.common_tags,
     {
-      Name               = "${local.name_prefix}-https-listener"
-      ActiveEnvironment  = var.active_environment
+      Name              = "${local.name_prefix}-https-listener"
+      ActiveEnvironment = var.active_environment
     }
   )
 

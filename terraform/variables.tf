@@ -122,7 +122,7 @@ variable "allowed_ssh_ip" {
 variable "use_rds" {
   description = "Use RDS or stick with SQLite in Docker"
   type        = bool
-  default     = false
+  default     = true # Changed to true - using RDS PostgreSQL now!
 }
 
 variable "db_instance_class" {
@@ -163,7 +163,7 @@ variable "db_username" {
 variable "db_password" {
   description = "Master password for database"
   type        = string
-  sensitive   = true # Hides value in Terraform output
+  sensitive   = true                   # Hides value in Terraform output
   default     = "not-used-sqlite-only" # Default value since we're using SQLite
 
   # For this project, you'll set this when running terraform apply
@@ -216,7 +216,7 @@ variable "s3_enable_versioning" {
 variable "enable_dns" {
   description = "Enable Route53 DNS configuration"
   type        = bool
-  default     = true  # Enabled - we have the nt-nick.link hosted zone
+  default     = true # Enabled - we have the nt-nick.link hosted zone
 
   # Set to true only if:
   # 1. You have a Route53 hosted zone
