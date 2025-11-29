@@ -223,14 +223,14 @@ locals {
     # These will be injected into Docker container for the /api/info endpoint
     %{if var.use_rds}
     # Using RDS PostgreSQL
-    cat > /home/ec2-user/app/.env <<'ENVFILE'
+    cat > /home/ec2-user/app/.env <<ENVFILE
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
-DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-GIT_COMMIT=$(echo ${var.docker_tag} | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
+DEPLOYMENT_TIME=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=\$(echo "${var.docker_tag}" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
 DEPLOYED_BY=github-actions
 ACTIVE_ENVIRONMENT=${var.active_environment}
-INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
+INSTANCE_ID=\$(ec2-metadata --instance-id | cut -d " " -f 2)
 
 # Application Configuration
 FLASK_ENV=prod
@@ -248,14 +248,14 @@ ENVFILE
     echo "DB_PASSWORD=$DB_PASSWORD" >> /home/ec2-user/app/.env
     %{else}
     # Using SQLite (fallback)
-    cat > /home/ec2-user/app/.env <<'ENVFILE'
+    cat > /home/ec2-user/app/.env <<ENVFILE
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
-DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-GIT_COMMIT=$(echo ${var.docker_tag} | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
+DEPLOYMENT_TIME=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=\$(echo "${var.docker_tag}" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
 DEPLOYED_BY=github-actions
 ACTIVE_ENVIRONMENT=${var.active_environment}
-INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
+INSTANCE_ID=\$(ec2-metadata --instance-id | cut -d " " -f 2)
 
 # Application Configuration
 FLASK_ENV=prod
