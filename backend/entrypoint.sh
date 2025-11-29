@@ -160,6 +160,33 @@ echo "   - SNS Topic: ${SNS_TOPIC_ARN:+***configured***}"
 echo "   - AWS Region: $AWS_REGION"
 
 # ----------------------------------------------------------------------------
+# FIX DEPLOYMENT INFO ENVIRONMENT VARIABLES
+# ----------------------------------------------------------------------------
+# If env vars contain shell syntax (not executed), fix them at container start
+
+echo ""
+echo "🔧 Checking deployment info environment variables..."
+
+# Fix DEPLOYMENT_TIME if it contains $( syntax
+if [[ "$DEPLOYMENT_TIME" == *'$('* ]]; then
+    export DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "   ✅ Fixed DEPLOYMENT_TIME: $DEPLOYMENT_TIME"
+fi
+
+# Fix GIT_COMMIT if it contains $( or ${ syntax
+if [[ "$GIT_COMMIT" == *'$('* ]] || [[ "$GIT_COMMIT" == *'${'* ]]; then
+    export GIT_COMMIT=$(echo "$DOCKER_TAG" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
+    echo "   ✅ Fixed GIT_COMMIT: $GIT_COMMIT"
+fi
+
+# Fix INSTANCE_ID if it contains $( syntax
+if [[ "$INSTANCE_ID" == *'$('* ]]; then
+    # Try EC2 metadata API
+    export INSTANCE_ID=$(curl -s --max-time 2 http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "local")
+    echo "   ✅ Fixed INSTANCE_ID: $INSTANCE_ID"
+fi
+
+# ----------------------------------------------------------------------------
 # START APPLICATION
 # ----------------------------------------------------------------------------
 

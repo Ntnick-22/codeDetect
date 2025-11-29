@@ -50,7 +50,7 @@ RUN mkdir -p /app/uploads && \
     chmod -R 777 /app/instance
 
 # Copy and set entrypoint script permissions
-COPY entrypoint.sh /app/entrypoint.sh
+COPY backend/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Set environment variables
