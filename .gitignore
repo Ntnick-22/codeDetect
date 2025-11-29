@@ -77,3 +77,32 @@ terraform/*.pem
 terraform/SECRETS_UPDATE.md
 terraform/*.tfplan
 terraform/tfplan
+
+# Test files and temporary scripts
+test_*.py
+test_*.json
+*_test.py
+super_vulnerable.py
+
+# Utility/Debug scripts (not needed in repo)
+build-and-push.sh
+check-*.sh
+fix-*.sh
+update-*.sh
+empty-*.py
+
+# Duplicate/Old docs (keep only latest)
+*_OLD.md
+*_BACKUP.md
+CICD_TEST.md
+DEBUG_*.md
+QUICK_FIX_*.md
+
+# Policy files (already in terraform)
+*-policy.json
+sns-policy.json
+cicd-policy.json
+
+# Presentation template copies (keep only one)
+*.pptx~
+~$*.pptx

@@ -299,7 +299,7 @@ resource "aws_autoscaling_group" "blue" {
   # Capacity configuration - controlled by active_environment variable
   # If blue is active: 1 instance (PostgreSQL can only run on one instance)
   # If green is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "blue" ? 1 : 0
+  min_size         = var.active_environment == "blue" ? 1 : 0  // change here if want multi instance no downtime / x 2
   max_size         = var.active_environment == "blue" ? 2 : 0
   desired_capacity = var.active_environment == "blue" ? 1 : 0
 

@@ -62,7 +62,7 @@ variable "vpc_cidr" {
 
   # This gives you 65,536 IP addresses
   # Format: 10.0.0.0 to 10.0.255.255
-}
+} 
 
 # Number of availability zones to use
 variable "availability_zones_count" {
