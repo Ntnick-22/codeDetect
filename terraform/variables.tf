@@ -47,7 +47,7 @@ variable "active_environment" {
 variable "owner_email" {
   description = "Email address of the project owner"
   type        = string
-  default     = "your-email@example.com" # CHANGE THIS!
+  default     = "nyeinthunaing322@gmail.com" # CHANGE THIS!
 }
 
 # ----------------------------------------------------------------------------
@@ -258,7 +258,7 @@ variable "docker_image_repo" {
 variable "docker_tag" {
   description = "Docker image tag to deploy (e.g., v1.0, v1.1, latest)"
   type        = string
-  default     = "v1.0"
+  default     = "latest"
 
   # This is the version of your application to deploy
   # Blue/Green deployments can use different tags
