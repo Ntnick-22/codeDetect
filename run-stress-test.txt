@@ -1,0 +1,26 @@
+# ========================================
+# SSH into EC2 and run this stress test
+# ========================================
+
+# 1. SSH into your EC2 instance:
+ssh -i terraform/codedetect-key ec2-user@<YOUR-EC2-IP>
+
+# 2. Install stress tool (if not already installed):
+sudo yum install -y stress
+
+# 3. Run CPU stress test for 6 minutes (triggers alarm at 5 min):
+stress --cpu 2 --timeout 360s
+
+# While it runs, open another terminal and watch CPU:
+top
+
+# Or monitor from local machine:
+# Watch CloudWatch dashboard:
+https://eu-west-1.console.aws.amazon.com/cloudwatch/home?region=eu-west-1#alarmsV2:
+
+# Expected results:
+# - CPU will spike to ~100%
+# - After 5 minutes, CloudWatch alarm "codedetect-prod-high-cpu" triggers
+# - Email sent via SNS to your registered email
+# - After stress ends, CPU drops and alarm auto-resolves
+
