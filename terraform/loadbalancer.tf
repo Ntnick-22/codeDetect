@@ -297,11 +297,15 @@ resource "aws_autoscaling_group" "blue" {
   name = "${local.name_prefix}-blue-asg"
 
   # Capacity configuration - controlled by active_environment variable
-  # If blue is active: 1 instance (PostgreSQL can only run on one instance)
-  # If green is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "blue" ? 1 : 0  // change here if want multi instance no downtime / x 2
-  max_size         = var.active_environment == "blue" ? 2 : 0
-  desired_capacity = var.active_environment == "blue" ? 1 : 0
+  # PRODUCTION (current): 1 instance per environment
+  # min_size         = var.active_environment == "blue" ? 1 : 0
+  # max_size         = var.active_environment == "blue" ? 2 : 0
+  # desired_capacity = var.active_environment == "blue" ? 1 : 0
+
+  # DEMO MODE (uncomment below for presentation - 2 instances per environment)
+  min_size         = var.active_environment == "blue" ? 2 : 0
+  max_size         = var.active_environment == "blue" ? 4 : 0
+  desired_capacity = var.active_environment == "blue" ? 2 : 0
 
   # Health check configuration
   health_check_type         = "ELB" # Use load balancer health checks
@@ -364,11 +368,15 @@ resource "aws_autoscaling_group" "green" {
   name = "${local.name_prefix}-green-asg"
 
   # Capacity configuration - controlled by active_environment variable
-  # If green is active: 1 instance (PostgreSQL can only run on one instance)
-  # If blue is active: 0 instances (scaled down)
-  min_size         = var.active_environment == "green" ? 1 : 0
-  max_size         = var.active_environment == "green" ? 2 : 0
-  desired_capacity = var.active_environment == "green" ? 1 : 0
+  # PRODUCTION (current): 1 instance per environment
+  # min_size         = var.active_environment == "green" ? 1 : 0
+  # max_size         = var.active_environment == "green" ? 2 : 0
+  # desired_capacity = var.active_environment == "green" ? 1 : 0
+
+  # DEMO MODE (uncomment below for presentation - 2 instances per environment)
+  min_size         = var.active_environment == "green" ? 2 : 0
+  max_size         = var.active_environment == "green" ? 4 : 0
+  desired_capacity = var.active_environment == "green" ? 2 : 0
 
   # Health check configuration
   health_check_type         = "ELB"
