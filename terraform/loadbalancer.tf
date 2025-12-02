@@ -465,14 +465,14 @@ resource "aws_cloudwatch_metric_alarm" "blue_cpu_high" {
   namespace           = "AWS/EC2"
   period              = 300
   statistic           = "Average"
-  threshold           = 70
+  threshold           = 40
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.blue.name
   }
 
-  alarm_description = "Blue: Scale up when CPU exceeds 70%"
-  alarm_actions     = [aws_autoscaling_policy.blue_scale_up.arn]
+  alarm_description = "Blue: Scale up when CPU exceeds 40%"
+  alarm_actions     = [aws_autoscaling_policy.blue_scale_up.arn, aws_sns_topic.alerts.arn]
 
   tags = merge(
     local.common_tags,
@@ -541,14 +541,14 @@ resource "aws_cloudwatch_metric_alarm" "green_cpu_high" {
   namespace           = "AWS/EC2"
   period              = 300
   statistic           = "Average"
-  threshold           = 70
+  threshold           = 40
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.green.name
   }
 
-  alarm_description = "Green: Scale up when CPU exceeds 70%"
-  alarm_actions     = [aws_autoscaling_policy.green_scale_up.arn]
+  alarm_description = "Green: Scale up when CPU exceeds 40%"
+  alarm_actions     = [aws_autoscaling_policy.green_scale_up.arn, aws_sns_topic.alerts.arn]
 
   tags = merge(
     local.common_tags,

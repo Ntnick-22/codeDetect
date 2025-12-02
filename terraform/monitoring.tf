@@ -70,71 +70,12 @@ resource "aws_sns_topic_subscription" "sms_alerts" {
 }
 
 # ----------------------------------------------------------------------------
-# CLOUDWATCH ALARM 1: High CPU Usage
+# Note: CPU alarms for Blue/Green ASGs are defined in loadbalancer.tf
+# They trigger autoscaling policies AND send SNS notifications
 # ----------------------------------------------------------------------------
 
-# WHAT: CloudWatch Alarm for CPU monitoring
-# Checks if EC2 CPU usage exceeds 80% for sustained period
-
-# WHY 80%: Industry standard threshold
-# - Below 70% = Normal operation
-# - 70-80% = Getting busy, keep eye on it
-# - 80-90% = High load, investigate
-# - 90%+ = Critical, may cause slowness
-
-# WHY 5 minutes (3 x 60 seconds):
-# Prevents false alarms from temporary spikes
-# Example: Brief CPU spike during deployment won't trigger alarm
-
-resource "aws_cloudwatch_metric_alarm" "high_cpu" {
-  alarm_name        = "${local.name_prefix}-high-cpu"
-  alarm_description = "Alert when EC2 CPU exceeds 80% for 5 minutes"
-
-  # What metric to monitor
-  namespace   = "AWS/EC2"        # AWS service
-  metric_name = "CPUUtilization" # Built-in EC2 metric
-  statistic   = "Average"        # Use average (not max/min)
-
-  # Comparison logic
-  comparison_operator = "GreaterThanThreshold" # CPU > threshold
-  threshold           = 40                     # 40% (lowered for easier testing)
-
-  # Time-based settings
-  period             = 60 # Check every 60 seconds
-  evaluation_periods = 5  # Must exceed for 5 checks
-  # Formula: Must be high for (period x evaluation_periods) = 5 minutes
-
-  # What to monitor (Auto Scaling Group instead of single instance)
-  # UPDATED: Now monitors Active Auto Scaling Group (blue or green)
-  dimensions = {
-    AutoScalingGroupName = local.active_asg_name
-  }
-
-  # What to do when alarm triggers
-  alarm_actions = [
-    aws_sns_topic.alerts.arn # Send notification to SNS topic
-  ]
-
-  # Optional: What to do when alarm recovers (goes back to normal)
-  ok_actions = [
-    aws_sns_topic.alerts.arn # Notify that problem is resolved
-  ]
-
-  # Treat missing data as "not breaching" (instance might be stopped)
-  treat_missing_data = "notBreaching"
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name     = "${local.name_prefix}-high-cpu-alarm"
-      Severity = "Warning"
-      Resource = "EC2"
-    }
-  )
-}
-
 # ----------------------------------------------------------------------------
-# CLOUDWATCH ALARM 2: Instance Status Check Failed
+# CLOUDWATCH ALARM 1: Instance Status Check Failed
 # ----------------------------------------------------------------------------
 
 # WHAT: Monitors AWS's automated health checks on your EC2
