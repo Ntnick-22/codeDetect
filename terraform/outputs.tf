@@ -213,10 +213,11 @@ output "notification_email" {
 output "cloudwatch_alarms" {
   description = "List of CloudWatch alarms created"
   value = {
-    blue_cpu_high_alarm = aws_cloudwatch_metric_alarm.blue_cpu_high.alarm_name
-    green_cpu_high_alarm = aws_cloudwatch_metric_alarm.green_cpu_high.alarm_name
-    instance_down_alarm = aws_cloudwatch_metric_alarm.instance_status_check.alarm_name
-    high_network_alarm  = aws_cloudwatch_metric_alarm.high_network_out.alarm_name
+    blue_cpu_high_alarm   = aws_cloudwatch_metric_alarm.blue_cpu_high.alarm_name
+    green_cpu_high_alarm  = aws_cloudwatch_metric_alarm.green_cpu_high.alarm_name
+    instance_down_alarm   = aws_cloudwatch_metric_alarm.instance_status_check.alarm_name
+    unhealthy_targets_alarm = aws_cloudwatch_metric_alarm.unhealthy_targets.alarm_name
+    high_network_alarm    = aws_cloudwatch_metric_alarm.high_network_out.alarm_name
   }
 }
 

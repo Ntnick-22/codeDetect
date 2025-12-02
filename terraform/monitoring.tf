@@ -125,6 +125,49 @@ resource "aws_cloudwatch_metric_alarm" "instance_status_check" {
 }
 
 # ----------------------------------------------------------------------------
+# CLOUDWATCH ALARM 2: Unhealthy Target (Application Down)
+# ----------------------------------------------------------------------------
+
+# WHAT: Monitors ALB target health
+# This detects when your application becomes unhealthy (Docker stops, app crashes, etc.)
+# Unlike StatusCheckFailed which monitors OS-level issues, this monitors your app
+
+resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
+  alarm_name        = "${local.name_prefix}-unhealthy-targets"
+  alarm_description = "Alert when targets become unhealthy (app is down)"
+
+  namespace   = "AWS/ApplicationELB"
+  metric_name = "UnHealthyHostCount"
+  statistic   = "Maximum"
+
+  comparison_operator = "GreaterThanThreshold"
+  threshold           = 0 # Alert if ANY target is unhealthy
+
+  period             = 60  # 1 minute
+  evaluation_periods = 2   # 2 consecutive checks
+
+  # Monitor the active target group
+  dimensions = {
+    TargetGroup  = replace(var.active_environment == "blue" ? aws_lb_target_group.blue.arn : aws_lb_target_group.green.arn, "/^.*:(targetgroup\\/.*)/", "$1")
+    LoadBalancer = replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", "")
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+
+  treat_missing_data = "notBreaching"
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name     = "${local.name_prefix}-unhealthy-targets-alarm"
+      Severity = "High"
+      Resource = "ALB"
+    }
+  )
+}
+
+# ----------------------------------------------------------------------------
 # CLOUDWATCH ALARM 3: High Network Out (Traffic Spike)
 # ----------------------------------------------------------------------------
 
@@ -256,6 +299,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           title = "🚨 Alarm Status"
           alarms = [
             aws_cloudwatch_metric_alarm.instance_status_check.arn,
+            aws_cloudwatch_metric_alarm.unhealthy_targets.arn,
             aws_cloudwatch_metric_alarm.high_network_out.arn,
             aws_cloudwatch_metric_alarm.blue_cpu_high.arn,
             aws_cloudwatch_metric_alarm.blue_cpu_low.arn,
