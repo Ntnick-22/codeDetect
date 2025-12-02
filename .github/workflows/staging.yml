@@ -3,14 +3,14 @@ name: CI/CD - Staging Deploy
 on:
   push:
     branches:
-      - staging
-  workflow_dispatch:
+      - staging  # Triggers when you push to staging branch
+  workflow_dispatch:  # Manual trigger from GitHub Actions UI
 
 env:
   DOCKER_USERNAME: nyeinthunaing
   DOCKER_IMAGE: nyeinthunaing/codedetect
   AWS_REGION: eu-west-1
-  DOCKER_TAG: staging
+  DOCKER_TAG: staging-latest
 
 jobs:
   build-staging-image:
@@ -27,13 +27,13 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build & Push :staging image
+      - name: Build & Push :staging-latest image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ${{ env.DOCKER_IMAGE }}:staging
+            ${{ env.DOCKER_IMAGE }}:staging-latest
             ${{ env.DOCKER_IMAGE }}:staging-${{ github.sha }}
 
   deploy-staging:
@@ -62,25 +62,24 @@ jobs:
           cd terraform
           terraform init
 
+      - name: Select Staging Workspace
+        run: |
+          cd terraform
+          terraform workspace select staging || terraform workspace new staging
+
       - name: Terraform Plan for Staging
         run: |
           cd terraform
-          terraform plan \
-            -var="active_environment=staging" \
-            -var="docker_tag=staging" \
-            -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform plan -var-file="staging.tfvars"
 
       - name: Terraform Apply for Staging
         run: |
           cd terraform
-          terraform apply -auto-approve \
-            -var="active_environment=staging" \
-            -var="docker_tag=staging" \
-            -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform apply -auto-approve -var-file="staging.tfvars"
 
       - name: Wait for Staging Instances to be Healthy
         run: |
-          STAGING_ASG="codedetect-staging-asg"
+          STAGING_ASG="codedetect-staging-blue-asg"
           echo "Waiting for staging instances in $STAGING_ASG"
 
           for i in {1..20}; do
@@ -96,7 +95,7 @@ jobs:
 
             echo "Healthy: $HEALTHY / $DESIRED"
 
-            if [ "$HEALTHY" -eq "$DESIRED" ]; then
+            if [ "$HEALTHY" -eq "$DESIRED" ] && [ "$HEALTHY" -gt "0" ]; then
               echo "Staging environment is healthy!"
               break
             fi
