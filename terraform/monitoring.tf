@@ -59,6 +59,16 @@ resource "aws_sns_topic_subscription" "email_alerts" {
   # Check spam folder if you don't see it
 }
 
+# SMS Alerts (backup notification method)
+resource "aws_sns_topic_subscription" "sms_alerts" {
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "sms"
+  endpoint  = "+353892131693" # Ireland phone number
+
+  # SMS will be sent immediately, no confirmation needed
+  # Cost: ~$0.007 per SMS in EU
+}
+
 # ----------------------------------------------------------------------------
 # CLOUDWATCH ALARM 1: High CPU Usage
 # ----------------------------------------------------------------------------
@@ -87,7 +97,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 
   # Comparison logic
   comparison_operator = "GreaterThanThreshold" # CPU > threshold
-  threshold           = 80                     # 80%
+  threshold           = 40                     # 40% (lowered for easier testing)
 
   # Time-based settings
   period             = 60 # Check every 60 seconds
