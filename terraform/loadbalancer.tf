@@ -438,7 +438,7 @@ resource "aws_autoscaling_group" "green" {
 # AUTO SCALING POLICIES - BLUE ENVIRONMENT
 # ----------------------------------------------------------------------------
 
-# Blue: Scale up when CPU > 70%
+# Blue: Scale up when CPU > 40%
 resource "aws_autoscaling_policy" "blue_scale_up" {
   name                   = "${local.name_prefix}-blue-scale-up"
   scaling_adjustment     = 1
@@ -514,7 +514,7 @@ resource "aws_cloudwatch_metric_alarm" "blue_cpu_low" {
 # AUTO SCALING POLICIES - GREEN ENVIRONMENT
 # ----------------------------------------------------------------------------
 
-# Green: Scale up when CPU > 70%
+# Green: Scale up when CPU > 40%
 resource "aws_autoscaling_policy" "green_scale_up" {
   name                   = "${local.name_prefix}-green-scale-up"
   scaling_adjustment     = 1

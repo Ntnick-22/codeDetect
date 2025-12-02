@@ -63,7 +63,7 @@ resource "aws_sns_topic_subscription" "email_alerts" {
 resource "aws_sns_topic_subscription" "sms_alerts" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "sms"
-  endpoint  = "+353892131693" # Ireland phone number
+  endpoint  = "+3530892131693" # Ireland phone number (with 0)
 
   # SMS will be sent immediately, no confirmation needed
   # Cost: ~$0.007 per SMS in EU
@@ -255,7 +255,6 @@ resource "aws_cloudwatch_dashboard" "main" {
         properties = {
           title = "🚨 Alarm Status"
           alarms = [
-            aws_cloudwatch_metric_alarm.high_cpu.arn,
             aws_cloudwatch_metric_alarm.instance_status_check.arn,
             aws_cloudwatch_metric_alarm.high_network_out.arn,
             aws_cloudwatch_metric_alarm.blue_cpu_high.arn,

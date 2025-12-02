@@ -213,7 +213,8 @@ output "notification_email" {
 output "cloudwatch_alarms" {
   description = "List of CloudWatch alarms created"
   value = {
-    high_cpu_alarm      = aws_cloudwatch_metric_alarm.high_cpu.alarm_name
+    blue_cpu_high_alarm = aws_cloudwatch_metric_alarm.blue_cpu_high.alarm_name
+    green_cpu_high_alarm = aws_cloudwatch_metric_alarm.green_cpu_high.alarm_name
     instance_down_alarm = aws_cloudwatch_metric_alarm.instance_status_check.alarm_name
     high_network_alarm  = aws_cloudwatch_metric_alarm.high_network_out.alarm_name
   }
@@ -254,11 +255,11 @@ output "monitoring_setup_instructions" {
 
     4. TEST AN ALARM (optional):
        aws cloudwatch set-alarm-state \
-         --alarm-name ${aws_cloudwatch_metric_alarm.high_cpu.alarm_name} \
+         --alarm-name ${aws_cloudwatch_metric_alarm.blue_cpu_high.alarm_name} \
          --state-value ALARM \
          --state-reason "Testing alarm notification"
 
-       You should receive test email within 1 minute.
+       You should receive test email + SMS within 1 minute.
 
     Monitoring Dashboard: ${aws_sns_topic.alerts.arn}
 
