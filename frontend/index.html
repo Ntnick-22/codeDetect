@@ -78,7 +78,10 @@
                 <div class="sidebar-footer">
                     <div class="px-3 py-3">
                         <small class="text-white-50">Version 2.1.0-HA</small><br>
-                        <small class="text-white-50">Auto Scaling: Active</small>
+                        <small class="text-white-50">Auto Scaling: Active</small><br>
+                        <button class="btn btn-sm btn-outline-light mt-2 w-100" data-bs-toggle="modal" data-bs-target="#reportModal">
+                            <i class="bi bi-flag me-1"></i> Report Issue
+                        </button>
                     </div>
                 </div>
             </div>
@@ -513,6 +516,51 @@
     </div>
 
 
+    <!-- Report Issue Modal -->
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportModalLabel">
+                        <i class="bi bi-flag me-2"></i>Report Issue / Feedback
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reportForm">
+                        <div class="mb-3">
+                            <label for="reportEmail" class="form-label">Your Email</label>
+                            <input type="email" class="form-control" id="reportEmail" placeholder="your@email.com" required>
+                            <small class="text-muted">We'll use this to get back to you</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reportType" class="form-label">Issue Type</label>
+                            <select class="form-select" id="reportType" required>
+                                <option value="">Select type...</option>
+                                <option value="bug">Bug Report</option>
+                                <option value="feature">Feature Request</option>
+                                <option value="feedback">General Feedback</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reportMessage" class="form-label">Message</label>
+                            <textarea class="form-control" id="reportMessage" rows="5" placeholder="Describe the issue or your feedback..." maxlength="500" required></textarea>
+                            <small class="text-muted"><span id="charCount">0</span>/500 characters</small>
+                        </div>
+                    </form>
+                    <div id="reportStatus"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitReport()">
+                        <i class="bi bi-send me-1"></i>Send Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -521,5 +569,6 @@
 
     <!-- Custom JS -->
     <script src="script.js"></script>
+    <script src="report-system.js"></script>
 </body>
 </html>
