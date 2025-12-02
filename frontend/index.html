@@ -17,7 +17,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- AWS Console-style Layout -->
+
+    <!-- STAGING TEST BANNER -->
+    <div style="background: linear-gradient(135deg, #ff9800 0%, #ff6b00 100%); color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+        🚧 STAGING ENVIRONMENT - TESTING IN PROGRESS 🚧
+        <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: normal;">This is a test deployment for staging validation</p>
+    </div>
+
     <div class="dashboard-container">
         <!-- Top Navigation Bar -->
         <nav class="top-navbar">
@@ -26,8 +32,10 @@
                     <button class="sidebar-toggle" id="sidebarToggle">
                         <i class="bi bi-list"></i>
                     </button>
-                    <h5 class="mb-0 ms-3 fw-bold" style="color: var(--text-primary);">CodeDetect test</h5>
-                    <span class="badge ms-3" style="background: var(--accent-success); color: white;">Live</span>
+                    <h5 class="mb-0 ms-3 fw-bold" style="color: var(--text-primary);">CodeDetect(staging)</h5>
+                    <span class="badge ms-3" style="background: var(--accent-success); color: white;" id="env-badge">
+                        <i class="bi bi-server me-1"></i><span id="env-text">Production</span>
+                    </span>
                     <span class="badge ms-2" style="background: var(--bg-tertiary); color: var(--text-secondary);" id="version-badge">
                         <i class="bi bi-tag me-1"></i><span id="version-text">Loading...</span>
                     </span>
