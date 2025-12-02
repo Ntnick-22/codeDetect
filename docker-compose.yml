@@ -33,7 +33,7 @@ services:
       # RDS_ENDPOINT = RDS PostgreSQL hostname (fetched by EC2 user data script)
       # Falls back to SQLite if RDS_ENDPOINT not set (for local development)
       - DATABASE_URL=${RDS_ENDPOINT:+postgresql://${DB_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}/${DB_NAME}}${RDS_ENDPOINT:-sqlite:///codedetect.db}
-      - FLASK_ENV=production
+      - FLASK_ENV=${FLASK_ENV:-production}
     volumes:
       # ===================================================================
       # FILE UPLOADS - Using EFS (shared across all instances)
