@@ -14,3 +14,5 @@
 
   # Restart
   docker-compose down && docker-compose up -d
+
+    terraform output load_balancer_url
