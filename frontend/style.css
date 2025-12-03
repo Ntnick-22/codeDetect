@@ -17,10 +17,10 @@
     --border-color: #e9ecef;
     --border-dark: #dee2e6;
 
-    /* Text - Darker for better readability */
-    --text-primary: #0f172a;          /* Much darker, easier to read */
-    --text-secondary: #475569;        /* Darker secondary text */
-    --text-muted: #94a3b8;            /* Softer muted text */
+    /* Text - Dark for light background */
+    --text-primary: #1a202c;          /* Dark text for readability */
+    --text-secondary: #2d3748;        /* Dark secondary text */
+    --text-muted: #718096;            /* Visible muted text */
 
     /* Accent Colors - Vibrant but not overwhelming */
     --accent-primary: #6366f1;        /* Indigo - modern, professional */
@@ -163,6 +163,7 @@ body {
 .sidebar-footer {
     border-top: 1px solid var(--border-color);
     margin-top: auto;
+    padding: 1rem 0;
 }
 
 /* ============================================
@@ -173,7 +174,7 @@ body {
     margin-top: var(--navbar-height);
     margin-left: var(--sidebar-width);
     padding: 2rem;
-    min-height: calc(100vh - var(--navbar-height));
+    min-height: calc(100vh - var(--navbar-height) - 150px);
     transition: var(--transition);
 }
 
@@ -278,16 +279,19 @@ body {
 }
 
 .stat-info h3 {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
     margin: 0;
-    color: var(--text-primary);
+    color: #1a202c;
+    text-shadow: none;
 }
 
 .stat-info p {
     margin: 0;
-    color: var(--text-muted);
-    font-size: 0.875rem;
+    color: #718096;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-top: 0.25rem;
 }
 
 /* ============================================
@@ -338,9 +342,11 @@ body {
     justify-content: center;
     font-size: 3rem;
     font-weight: 700;
-    border: 4px solid var(--border-color);
-    background: var(--sidebar-bg);
-    color: var(--text-primary);
+    border: 5px solid #ff9900;
+    background: linear-gradient(135deg, #232f3e 0%, #1a242f 100%);
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 24px rgba(255, 153, 0, 0.2);
     animation: scaleIn 0.5s ease-out;
 }
 
@@ -491,28 +497,99 @@ body {
 .modal-content {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
-    background: var(--aws-navbar-bg);
-    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, #232f3e 0%, #1a242f 100%);
+    border-bottom: 2px solid #ff9900;
+    border-radius: 12px 12px 0 0;
+    padding: 1.25rem 1.5rem;
 }
 
 .modal-title {
-    color: var(--text-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.modal-title i {
+    color: #ff9900;
 }
 
 .modal-body {
     color: var(--text-primary);
+    padding: 1.5rem;
 }
 
-.modal-body h6 {
-    color: var(--accent-primary);
+.modal-body .form-label {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.75rem;
+    border-radius: 6px;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #ff9900;
+    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.1);
+    color: var(--text-primary);
+}
+
+.modal-body .text-muted {
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 0.875rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 0 0 12px 12px;
+}
+
+.modal-footer .btn-primary {
+    background: #ff9900;
+    border: none;
+    color: #000;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.modal-footer .btn-primary:hover {
+    background: #ec7211;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3);
+}
+
+.modal-footer .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.modal-footer .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--border-color);
 }
 
 .btn-close {
     filter: invert(1);
+    opacity: 0.8;
+}
+
+.btn-close:hover {
+    opacity: 1;
 }
 
 /* ============================================

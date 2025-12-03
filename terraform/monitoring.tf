@@ -59,72 +59,23 @@ resource "aws_sns_topic_subscription" "email_alerts" {
   # Check spam folder if you don't see it
 }
 
-# ----------------------------------------------------------------------------
-# CLOUDWATCH ALARM 1: High CPU Usage
-# ----------------------------------------------------------------------------
+# SMS Alerts (backup notification method)
+resource "aws_sns_topic_subscription" "sms_alerts" {
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "sms"
+  endpoint  = "+3530892131693" # Ireland phone number (with 0)
 
-# WHAT: CloudWatch Alarm for CPU monitoring
-# Checks if EC2 CPU usage exceeds 80% for sustained period
-
-# WHY 80%: Industry standard threshold
-# - Below 70% = Normal operation
-# - 70-80% = Getting busy, keep eye on it
-# - 80-90% = High load, investigate
-# - 90%+ = Critical, may cause slowness
-
-# WHY 5 minutes (3 x 60 seconds):
-# Prevents false alarms from temporary spikes
-# Example: Brief CPU spike during deployment won't trigger alarm
-
-resource "aws_cloudwatch_metric_alarm" "high_cpu" {
-  alarm_name        = "${local.name_prefix}-high-cpu"
-  alarm_description = "Alert when EC2 CPU exceeds 80% for 5 minutes"
-
-  # What metric to monitor
-  namespace   = "AWS/EC2"        # AWS service
-  metric_name = "CPUUtilization" # Built-in EC2 metric
-  statistic   = "Average"        # Use average (not max/min)
-
-  # Comparison logic
-  comparison_operator = "GreaterThanThreshold" # CPU > threshold
-  threshold           = 80                     # 80%
-
-  # Time-based settings
-  period             = 60 # Check every 60 seconds
-  evaluation_periods = 5  # Must exceed for 5 checks
-  # Formula: Must be high for (period x evaluation_periods) = 5 minutes
-
-  # What to monitor (Auto Scaling Group instead of single instance)
-  # UPDATED: Now monitors Active Auto Scaling Group (blue or green)
-  dimensions = {
-    AutoScalingGroupName = local.active_asg_name
-  }
-
-  # What to do when alarm triggers
-  alarm_actions = [
-    aws_sns_topic.alerts.arn # Send notification to SNS topic
-  ]
-
-  # Optional: What to do when alarm recovers (goes back to normal)
-  ok_actions = [
-    aws_sns_topic.alerts.arn # Notify that problem is resolved
-  ]
-
-  # Treat missing data as "not breaching" (instance might be stopped)
-  treat_missing_data = "notBreaching"
-
-  tags = merge(
-    local.common_tags,
-    {
-      Name     = "${local.name_prefix}-high-cpu-alarm"
-      Severity = "Warning"
-      Resource = "EC2"
-    }
-  )
+  # SMS will be sent immediately, no confirmation needed
+  # Cost: ~$0.007 per SMS in EU
 }
 
 # ----------------------------------------------------------------------------
-# CLOUDWATCH ALARM 2: Instance Status Check Failed
+# Note: CPU alarms for Blue/Green ASGs are defined in loadbalancer.tf
+# They trigger autoscaling policies AND send SNS notifications
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# CLOUDWATCH ALARM 1: Instance Status Check Failed
 # ----------------------------------------------------------------------------
 
 # WHAT: Monitors AWS's automated health checks on your EC2
@@ -169,6 +120,49 @@ resource "aws_cloudwatch_metric_alarm" "instance_status_check" {
       Name     = "${local.name_prefix}-instance-down-alarm"
       Severity = "Critical" # Instance down = CRITICAL
       Resource = "EC2"
+    }
+  )
+}
+
+# ----------------------------------------------------------------------------
+# CLOUDWATCH ALARM 2: Unhealthy Target (Application Down)
+# ----------------------------------------------------------------------------
+
+# WHAT: Monitors ALB target health
+# This detects when your application becomes unhealthy (Docker stops, app crashes, etc.)
+# Unlike StatusCheckFailed which monitors OS-level issues, this monitors your app
+
+resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {
+  alarm_name        = "${local.name_prefix}-unhealthy-targets"
+  alarm_description = "Alert when targets become unhealthy (app is down)"
+
+  namespace   = "AWS/ApplicationELB"
+  metric_name = "UnHealthyHostCount"
+  statistic   = "Maximum"
+
+  comparison_operator = "GreaterThanThreshold"
+  threshold           = 0 # Alert if ANY target is unhealthy
+
+  period             = 60  # 1 minute
+  evaluation_periods = 2   # 2 consecutive checks
+
+  # Monitor the active target group
+  dimensions = {
+    TargetGroup  = replace(var.active_environment == "blue" ? aws_lb_target_group.blue.arn : aws_lb_target_group.green.arn, "/^.*:(targetgroup\\/.*)/", "$1")
+    LoadBalancer = replace(aws_lb.main.arn, "/^.*:loadbalancer\\//", "")
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+
+  treat_missing_data = "notBreaching"
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name     = "${local.name_prefix}-unhealthy-targets-alarm"
+      Severity = "High"
+      Resource = "ALB"
     }
   )
 }
@@ -304,8 +298,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         properties = {
           title = "🚨 Alarm Status"
           alarms = [
-            aws_cloudwatch_metric_alarm.high_cpu.arn,
             aws_cloudwatch_metric_alarm.instance_status_check.arn,
+            aws_cloudwatch_metric_alarm.unhealthy_targets.arn,
             aws_cloudwatch_metric_alarm.high_network_out.arn,
             aws_cloudwatch_metric_alarm.blue_cpu_high.arn,
             aws_cloudwatch_metric_alarm.blue_cpu_low.arn,
