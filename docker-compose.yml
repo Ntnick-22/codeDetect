@@ -41,6 +41,13 @@ services:
       # Maps EFS upload folder to container uploads directory
       # All uploaded files are accessible from both instances
       - /mnt/efs/uploads:/app/uploads
+
+      # ===================================================================
+      # DATABASE - Using EFS (shared across all instances)
+      # ===================================================================
+      # Maps EFS database folder to container instance directory
+      # Both instances read/write to same SQLite database file
+      - /mnt/efs/database:/app/instance
     restart: unless-stopped
     # Health check for ALB
     healthcheck:

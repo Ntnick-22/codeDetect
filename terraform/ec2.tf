@@ -72,11 +72,16 @@ locals {
     # Create uploads directory on EFS (shared file uploads)
     mkdir -p /mnt/efs/uploads
 
+    # Create database directory on EFS (shared SQLite database)
+    mkdir -p /mnt/efs/database
+
     # Set ownership to ec2-user so Docker can write to it
     chown -R ec2-user:ec2-user /mnt/efs/postgres
     chown -R ec2-user:ec2-user /mnt/efs/uploads
+    chown -R ec2-user:ec2-user /mnt/efs/database
     chmod -R 755 /mnt/efs/postgres
     chmod -R 755 /mnt/efs/uploads
+    chmod -R 755 /mnt/efs/database
 
     echo "EFS mounted successfully at /mnt/efs" >> /var/log/codedetect-deploy.log
     # ========================================================================
