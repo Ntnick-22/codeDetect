@@ -106,3 +106,17 @@ cicd-policy.json
 # Presentation template copies (keep only one)
 *.pptx~
 ~$*.pptx
+
+# Local notes and documentation (keep local only)
+notes.md
+docs/DOCKER_*.md
+docs/WORKFLOW_*.md
+docs/PROJECT_*.md
+docs/INFRASTRUCTURE*.md
+docs/MONITORING_*.md
+docs/SNS_*.md
+docs/demo/*.drawio
+docs/demo/*.bkp
+*.png
+*.jpg
+*.jpeg
