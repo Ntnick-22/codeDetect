@@ -1,11 +1,19 @@
 # ============================================================================
-# STAGING ENVIRONMENT CONFIGURATION
+# STAGING ENVIRONMENT CONFIGURATION - OPTION A (REALISTIC)
 # ============================================================================
 # This file defines settings for the staging environment
 # Use with: terraform apply -var-file="staging.tfvars"
 #
-# Purpose: Safe testing environment that mirrors production
-# Cost: ~$3/month if used 8 hours/week, ~$0.50 per 3-hour session
+# CONFIGURATION: Realistic staging (mirrors production architecture)
+# Purpose: Safe testing environment that MIRRORS production setup
+# Cost: ~$18/month (~$8 EC2 + ~$15 RDS + $2 EBS if running 24/7)
+#       ~$10/month if only run 8-10 hours/week for testing
+#
+# WHY THIS APPROACH:
+# - Same database type (RDS PostgreSQL) catches DB issues before prod
+# - Same monitoring setup ensures alerts work correctly
+# - Same architecture reduces "works in staging, fails in prod" issues
+# - Only difference: Smaller instance sizes and fewer instances
 # ============================================================================
 
 # ----------------------------------------------------------------------------
@@ -23,6 +31,7 @@ instance_type = "t3.micro"
 
 # SSH Key (reuse same key as production)
 key_pair_name = "codedetect-key"
+allowed_ssh_ip = "80.233.75.162/32"  #current IP (same as prod for now)
 
 # ----------------------------------------------------------------------------
 # Blue/Green Deployment Configuration
@@ -44,14 +53,18 @@ s3_bucket_name = "codedetect-staging-uploads-2025"
 db_name = "codedetect_staging"
 
 # RDS Configuration
-# Set to false to use SQLite and save costs (~$15/month savings)
-# Set to true if you need to test RDS-specific features
-use_rds = false
+# OPTION A (REALISTIC): Use RDS to mirror production architecture
+# This costs ~$15/month but catches RDS-specific issues before production
+# RECOMMENDED for serious staging environment
+use_rds = true  # Changed to TRUE for realistic testing
 
-# If using RDS (use_rds = true), these apply:
+# RDS Settings (active when use_rds = true):
 db_username        = "codedetect_staging"
-db_instance_class  = "db.t3.micro" # Smallest RDS instance
+db_instance_class  = "db.t3.micro" # Smallest RDS instance (same as prod)
 db_allocated_storage = 20          # Minimum storage
+
+# NOTE: db_password should be passed via GitHub Secrets or terraform -var
+# Do NOT hardcode passwords in this file!
 
 # ----------------------------------------------------------------------------
 # Docker Image Configuration
@@ -69,9 +82,10 @@ docker_tag = "staging-latest"
 # ----------------------------------------------------------------------------
 # Monitoring & Logging
 # ----------------------------------------------------------------------------
-# Disable detailed monitoring to save costs
-# Basic monitoring (5-min intervals) is free and sufficient for staging
-enable_monitoring = false
+# OPTION A (REALISTIC): Enable monitoring to match production
+# This ensures alerts and dashboards work the same way in staging
+# Cost: Included in EC2 pricing (detailed monitoring is free for t3 instances)
+enable_monitoring = true  # Changed to TRUE to mirror production
 
 # ----------------------------------------------------------------------------
 # DNS Configuration
@@ -80,7 +94,7 @@ enable_monitoring = false
 # Access via ALB DNS instead: http://codedetect-staging-alb-*.elb.amazonaws.com
 enable_dns = false
 
-# If you want staging subdomain (costs ~$0.50/month for Route53 hosted zone):
+# If you want staging subdomain:
 # enable_dns = true
 # domain_name = "staging.codedetect.com"
 
@@ -106,6 +120,13 @@ enable_ssl = false
 # Disable NAT Gateway (use public subnets only)
 # If you need private subnets for testing:
 # create_nat_gateway = false
+
+# ----------------------------------------------------------------------------
+# Notifications
+# ----------------------------------------------------------------------------
+# Email for CloudWatch alarms and SNS notifications
+notification_email = "nyeinthunaing322@gmail.com"  # CHANGE THIS!
+owner_email = "nyeinthunaing322@gmail.com"  # CHANGE THIS!
 
 # ----------------------------------------------------------------------------
 # Tagging Configuration
