@@ -56,13 +56,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-# ============================================================================
-# DOCKER VOLUMES
-# ============================================================================
-# Named volumes for data persistence
-# These survive container deletions and restarts
-# volumes:
-#   postgres_data:
-#     # This would create a local Docker volume
-#     # But we're using EFS instead for multi-instance support

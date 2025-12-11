@@ -55,23 +55,79 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
+          pip install pytest pytest-cov pytest-flask  # Add testing dependencies
 
-      - name: Run Pylint (Code Quality)
+      - name: Run Unit Tests
         run: |
-          echo "=== Running Pylint ==="
-          pylint backend/app.py --exit-zero --output-format=colorized || true
+          echo "=== Running Unit Tests ==="
+          pytest tests/ -v --tb=short --cov=backend --cov-report=term-missing --cov-report=html
           echo ""
-          echo "Note: Pylint warnings won't fail the build, but please review them"
+          echo "All tests passed"
 
-      - name: Run Bandit (Security Check)
-        continue-on-error: true
+      - name: Run Pylint (Code Quality - ENFORCED)
+        run: |
+          echo "=== Running Pylint Code Quality Check ==="
+          echo "This step will FAIL if code quality is below threshold"
+          echo ""
+
+          # Run Pylint and capture output
+          pylint backend/app.py --output-format=colorized --score=yes || PYLINT_EXIT=$?
+
+          # Pylint exit codes:
+          # 0 = no issues
+          # 1 = fatal message issued
+          # 2 = error message issued
+          # 4 = warning message issued
+          # 8 = refactor message issued
+          # 16 = convention message issued
+          # 32 = usage error
+
+          # Fail on fatal (1) or error (2) or usage error (32)
+          if [ "${PYLINT_EXIT:-0}" -eq 1 ] || [ "${PYLINT_EXIT:-0}" -eq 2 ] || [ "${PYLINT_EXIT:-0}" -eq 32 ]; then
+            echo ""
+            echo "FAILED: Critical Pylint issues found (exit code: ${PYLINT_EXIT})"
+            echo "Fix errors before pushing to main branch"
+            exit 1
+          fi
+
+          echo ""
+          echo "Pylint check passed (warnings allowed, errors blocked)"
+
+      - name: Run Bandit (Security Check - ENFORCED)
         run: |
           echo "=== Running Bandit Security Scan ==="
-          pip install pbr  # Install missing dependency
-          bandit -r backend/ -f json -o bandit-report.json || true
-          bandit -r backend/ -f screen || true
+          echo "This step will FAIL if HIGH severity security issues are found"
           echo ""
-          echo "Security scan complete. Check for HIGH severity issues."
+
+          pip install pbr  # Install missing dependency
+
+          # Run Bandit and generate JSON report
+          bandit -r backend/ -f json -o bandit-report.json || true
+
+          # Also show human-readable output
+          bandit -r backend/ -f screen || true
+
+          # Check for HIGH severity issues
+          if grep -q '"issue_severity": "HIGH"' bandit-report.json; then
+            echo ""
+            echo "FAILED: HIGH severity security issues found!"
+            echo "Review bandit-report.json for details"
+            echo ""
+            echo "HIGH severity issues found:"
+            grep -A 5 '"issue_severity": "HIGH"' bandit-report.json | head -20
+            exit 1
+          fi
+
+          # Check for MEDIUM severity with HIGH confidence (also critical)
+          MEDIUM_HIGH_COUNT=$(grep -c '"issue_severity": "MEDIUM".*"issue_confidence": "HIGH"' bandit-report.json || true)
+          if [ "$MEDIUM_HIGH_COUNT" -gt 3 ]; then
+            echo ""
+            echo "WARNING: Found $MEDIUM_HIGH_COUNT MEDIUM severity issues with HIGH confidence"
+            echo "Consider fixing these before deployment"
+          fi
+
+          echo ""
+          echo "Bandit security scan passed (no HIGH severity issues)"
 
       - name: Test Docker Build
         run: |
@@ -86,6 +142,8 @@ jobs:
           name: test-reports
           path: |
             bandit-report.json
+            htmlcov/
+            .coverage
           retention-days: 30
 
   # =================================================================
@@ -138,10 +196,10 @@ jobs:
 
       - name: Image Summary
         run: |
-          echo "✅ Docker image built and pushed successfully!"
+          echo "Docker image built and pushed successfully!"
           echo ""
-          echo "📦 Image: ${{ env.DOCKER_IMAGE }}:${{ steps.generate_tag.outputs.tag }}"
-          echo "📦 Latest: ${{ env.DOCKER_IMAGE }}:latest"
+          echo "Image: ${{ env.DOCKER_IMAGE }}:${{ steps.generate_tag.outputs.tag }}"
+          echo "Latest: ${{ env.DOCKER_IMAGE }}:latest"
           echo ""
           echo "To pull this image:"
           echo "  docker pull ${{ env.DOCKER_IMAGE }}:${{ steps.generate_tag.outputs.tag }}"
@@ -195,7 +253,7 @@ jobs:
           fi
 
           echo "target=$TARGET" >> $GITHUB_OUTPUT
-          echo "🎯 Target environment: $TARGET"
+          echo "Target environment: $TARGET"
 
       - name: Blue/Green Deployment
         run: |
@@ -205,18 +263,18 @@ jobs:
           TARGET_ENV="${{ steps.target_env.outputs.target }}"
 
           echo "=== BLUE/GREEN DEPLOYMENT ==="
-          echo "🐳 Docker Tag: $DOCKER_TAG"
-          echo "🎯 Target Environment: $TARGET_ENV"
+          echo "Docker Tag: $DOCKER_TAG"
+          echo "Target Environment: $TARGET_ENV"
           echo ""
 
           # Plan the deployment
-          echo "📋 Running Terraform plan..."
+          echo "Running Terraform plan..."
           if ! terraform plan \
             -var="active_environment=$TARGET_ENV" \
             -var="docker_tag=$DOCKER_TAG" \
             -var="db_password=${{ secrets.DB_PASSWORD }}" \
             -out=tfplan; then
-            echo "❌ Terraform plan failed!"
+            echo "Terraform plan failed!"
             echo "Showing detailed error logs..."
             terraform plan \
               -var="active_environment=$TARGET_ENV" \
@@ -228,16 +286,16 @@ jobs:
 
           # Apply the deployment
           echo ""
-          echo "🚀 Applying Terraform changes..."
+          echo "Applying Terraform changes..."
           if ! terraform apply -auto-approve tfplan; then
-            echo "❌ Terraform apply failed!"
+            echo "Terraform apply failed!"
             echo "Showing Terraform state..."
             terraform show
             exit 1
           fi
 
           echo ""
-          echo "✅ Terraform apply completed!"
+          echo "Terraform apply completed!"
 
       - name: Wait for Instances to be Healthy
         run: |
@@ -263,7 +321,7 @@ jobs:
             echo "[$i/30] Healthy instances: $HEALTHY / $DESIRED"
 
             if [ "$HEALTHY" -ge "$DESIRED" ] && [ "$DESIRED" -gt "0" ]; then
-              echo "✅ All instances are healthy!"
+              echo "All instances are healthy!"
               break
             fi
 
@@ -285,16 +343,16 @@ jobs:
           response=$(curl -s -o /dev/null -w "%{http_code}" http://$ALB_DNS/api/health || echo "000")
 
           if [ "$response" = "200" ]; then
-            echo "✅ Deployment successful!"
+            echo "Deployment successful!"
             echo ""
-            echo "🌐 Application URL: http://$ALB_DNS"
-            echo "🐳 Docker Tag: ${{ needs.build-docker.outputs.docker_tag }}"
-            echo "🎯 Active Environment: ${{ steps.target_env.outputs.target }}"
+            echo "Application URL: http://$ALB_DNS"
+            echo "Docker Tag: ${{ needs.build-docker.outputs.docker_tag }}"
+            echo "Active Environment: ${{ steps.target_env.outputs.target }}"
             echo ""
             echo "App Info:"
             curl -s http://$ALB_DNS/api/info | head -10
           else
-            echo "⚠️ Health check response: $response"
+            echo "WARNING: Health check response: $response"
             echo "Application might still be starting..."
 
             # Retry a few times
@@ -303,14 +361,14 @@ jobs:
               sleep 15
               response=$(curl -s -o /dev/null -w "%{http_code}" http://$ALB_DNS/api/health || echo "000")
               if [ "$response" = "200" ]; then
-                echo "✅ Deployment successful!"
+                echo "Deployment successful!"
                 echo ""
-                echo "🌐 Application URL: http://$ALB_DNS"
+                echo "Application URL: http://$ALB_DNS"
                 exit 0
               fi
             done
 
-            echo "❌ Health check failed after retries. Please check AWS Console."
+            echo "FAILED: Health check failed after retries. Please check AWS Console."
             echo "Check ALB target health: https://console.aws.amazon.com/ec2/v2/home?region=eu-west-1#TargetGroups:"
             exit 1
           fi
@@ -322,13 +380,13 @@ jobs:
           ALB_DNS=$(terraform output -raw load_balancer_dns 2>/dev/null || echo "unknown")
 
           echo ""
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📊 DEPLOYMENT SUMMARY"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🐳 Docker Image: ${{ env.DOCKER_IMAGE }}:${{ needs.build-docker.outputs.docker_tag }}"
-          echo "🎯 Deployed to: ${{ steps.target_env.outputs.target }} environment"
-          echo "🌐 URL: http://$ALB_DNS"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "=============================================="
+          echo "DEPLOYMENT SUMMARY"
+          echo "=============================================="
+          echo "Docker Image: ${{ env.DOCKER_IMAGE }}:${{ needs.build-docker.outputs.docker_tag }}"
+          echo "Deployed to: ${{ steps.target_env.outputs.target }} environment"
+          echo "URL: http://$ALB_DNS"
+          echo "=============================================="
           echo ""
           echo "Next steps:"
           echo "  - Test the application: curl http://$ALB_DNS/api/health"

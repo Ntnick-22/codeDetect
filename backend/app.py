@@ -8,6 +8,11 @@ import json
 from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError
+import logging
+import traceback
+import secrets
+import hashlib
+import re
 
 # Flask setup
 app = Flask(
@@ -17,6 +22,15 @@ app = Flask(
     template_folder='../frontend'
 )
 CORS(app)
+
+# ============================================================
+# Logging Configuration
+# ============================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # Security Configuration
@@ -33,8 +47,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-CHANGE-I
 
 # Warn if using default secret key
 if app.config['SECRET_KEY'] == 'dev-secret-key-CHANGE-IN-PRODUCTION':
-    print("⚠️  WARNING: Using default SECRET_KEY - Not secure for production!")
-    print("   Set SECRET_KEY environment variable or configure AWS Parameter Store")
+    logger.warning("WARNING: Using default SECRET_KEY - Not secure for production!")
+    logger.warning("Set SECRET_KEY environment variable or configure AWS Parameter Store")
 
 # ============================================================
 # Database Configuration (works both locally and on AWS)
@@ -54,7 +68,7 @@ class Analysis(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # Anonymous field - just for identification, not real filename
     file_hash = db.Column(db.String(64), nullable=True)  # Changed from filename
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     score = db.Column(db.Integer, nullable=False)
     total_issues = db.Column(db.Integer, default=0)
     security_issues = db.Column(db.Integer, default=0)
@@ -94,33 +108,59 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 def allowed_file(filename):
+    """
+    Check if uploaded file has an allowed extension.
+
+    Args:
+        filename (str): Name of the uploaded file
+
+    Returns:
+        bool: True if file has .py extension, False otherwise
+    """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def upload_to_s3(filepath, bucket_name, s3_key):
-    """Upload file to AWS S3"""
+    """
+    Upload file to AWS S3 bucket.
+
+    Args:
+        filepath (str): Local path to file to upload
+        bucket_name (str): Name of S3 bucket
+        s3_key (str): S3 object key (path within bucket)
+
+    Returns:
+        bool: True if upload successful, False otherwise
+    """
     try:
         s3 = boto3.client('s3', region_name='eu-west-1')
-        print(f"🔄 Uploading {filepath} to s3://{bucket_name}/{s3_key}")
+        logger.info(f"Uploading {filepath} to s3://{bucket_name}/{s3_key}")
         s3.upload_file(filepath, bucket_name, s3_key)
-        print(f"✅ Successfully uploaded {s3_key} to {bucket_name}")
+        logger.info(f"Successfully uploaded {s3_key} to {bucket_name}")
         return True
     except FileNotFoundError:
-        print(f"❌ File not found for upload: {filepath}")
+        logger.error(f"File not found for upload: {filepath}")
         return False
     except NoCredentialsError:
-        print("❌ AWS credentials not available. Run 'aws configure'")
+        logger.error("AWS credentials not available. Run 'aws configure'")
         return False
     except Exception as e:
-        print(f"❌ S3 Upload failed - Error type: {type(e).__name__}")
-        print(f"❌ S3 Upload error details: {str(e)}")
-        import traceback
+        logger.error(f"S3 Upload failed - Error type: {type(e).__name__}")
+        logger.error(f"S3 Upload error details: {str(e)}")
         traceback.print_exc()
         return False
 
 
 def run_pylint(filepath):
-    """Run Pylint analysis"""
+    """
+    Run Pylint code quality analysis on Python file.
+
+    Args:
+        filepath (str): Path to Python file to analyze
+
+    Returns:
+        list: List of Pylint issues found, empty list if error or no issues
+    """
     try:
         result = subprocess.run(
             ['pylint', filepath, '--output-format=json'],
@@ -130,12 +170,20 @@ def run_pylint(filepath):
             return json.loads(result.stdout)
         return []
     except Exception as e:
-        print(f"Pylint error: {e}")
+        logger.error(f"Pylint error: {e}")
         return []
 
 
 def run_bandit(filepath):
-    """Run Bandit security analysis"""
+    """
+    Run Bandit security analysis on Python file.
+
+    Args:
+        filepath (str): Path to Python file to analyze
+
+    Returns:
+        list: List of security issues found, empty list if error or no issues
+    """
     try:
         # Bandit returns exit code 1 when issues found - this is NORMAL!
         # Don't treat it as an error
@@ -150,27 +198,34 @@ def run_bandit(filepath):
             try:
                 data = json.loads(result.stdout)
                 issues = data.get('results', [])
-                print(f"✅ Bandit found {len(issues)} security issues")
+                logger.info(f"Bandit found {len(issues)} security issues")
                 return issues
             except json.JSONDecodeError as e:
-                print(f"⚠️ Bandit JSON parse error: {e}")
-                print(f"Raw output: {result.stdout[:500]}")
+                logger.warning(f"Bandit JSON parse error: {e}")
+                logger.warning(f"Raw output: {result.stdout[:500]}")
                 return []
 
         # Check stderr for errors
         if result.stderr:
-            print(f"Bandit stderr: {result.stderr}")
+            logger.warning(f"Bandit stderr: {result.stderr}")
 
         return []
     except Exception as e:
-        print(f"❌ Bandit error: {e}")
-        import traceback
+        logger.error(f"Bandit error: {e}")
         traceback.print_exc()
         return []
 
 
 def run_radon(filepath):
-    """Run Radon complexity analysis"""
+    """
+    Run Radon cyclomatic complexity analysis on Python file.
+
+    Args:
+        filepath (str): Path to Python file to analyze
+
+    Returns:
+        dict: Complexity data for functions, empty dict if error
+    """
     try:
         result = subprocess.run(
             ['radon', 'cc', filepath, '-j'],
@@ -180,12 +235,22 @@ def run_radon(filepath):
             return json.loads(result.stdout)
         return {}
     except Exception as e:
-        print(f"Radon error: {e}")
+        logger.error(f"Radon error: {e}")
         return {}
 
 
 def calculate_score(pylint_issues, bandit_issues, complexity_data):
-    """Calculate overall code quality score"""
+    """
+    Calculate overall code quality score based on analysis results.
+
+    Args:
+        pylint_issues (list): List of Pylint issues
+        bandit_issues (list): List of Bandit security issues
+        complexity_data (dict): Radon complexity analysis results
+
+    Returns:
+        int: Quality score from 0-100 (100 = perfect, 0 = many issues)
+    """
     score = 100
     error_count = 0
     warning_count = 0
@@ -239,7 +304,15 @@ def index():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_code():
-    """Main endpoint for file analysis"""
+    """
+    Main endpoint for Python file analysis.
+
+    Accepts file upload, runs Pylint, Bandit, and Radon analyses,
+    uploads to S3, and stores anonymous statistics.
+
+    Returns:
+        tuple: JSON response with analysis results and HTTP status code
+    """
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
 
@@ -265,12 +338,12 @@ def analyze_code():
         bucket_name = os.environ.get(
             'S3_BUCKET_NAME', 'codedetect-nick-uploads-12345')
         s3_key = f"uploads/{unique_filename}"
-        print(f"📦 S3 Bucket: {bucket_name}")
-        print(f"🔑 S3 Key: {s3_key}")
+        logger.info(f"S3 Bucket: {bucket_name}")
+        logger.info(f"S3 Key: {s3_key}")
         upload_success = upload_to_s3(filepath, bucket_name, s3_key)
 
         if not upload_success:
-            print("⚠️ S3 upload failed - keeping local file for debugging")
+            logger.warning("S3 upload failed - keeping local file for debugging")
             # Clean up anyway to save space, but log the issue
             # User can check console output for errors
 
@@ -311,14 +384,13 @@ def analyze_code():
             )
             response['s3_url'] = presigned_url
         except Exception as e:
-            print(f"Failed to create presigned URL: {e}")
+            logger.error(f"Failed to create presigned URL: {e}")
 
         # Save to DB (ANONYMOUS - no filename or code content)
         # Only store aggregate stats for platform analytics
         try:
-            import hashlib
-            # Create anonymous hash (not tied to actual filename)
-            file_hash = hashlib.sha256(str(datetime.now().timestamp()).encode()).hexdigest()[:16]
+            # Create cryptographically secure random hash for anonymity
+            file_hash = secrets.token_hex(16)
 
             new_analysis = Analysis(
                 file_hash=file_hash,  # Anonymous identifier
@@ -330,20 +402,26 @@ def analyze_code():
             )
             db.session.add(new_analysis)
             db.session.commit()
-            print(f"✅ Anonymous analytics saved (hash: {file_hash})")
+            logger.info(f"Anonymous analytics saved (hash: {file_hash})")
         except Exception as e:
-            print(f"⚠️ Database save error (non-critical): {e}")
+            logger.warning(f"Database save error (non-critical): {e}")
 
         os.remove(filepath)  # cleanup local file
         return jsonify(response), 200
 
     except Exception as e:
-        print(f"Analysis error: {e}")
+        logger.error(f"Analysis error: {e}")
         return jsonify({'error': 'Analysis failed', 'details': str(e)}), 500
 
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    """
+    Health check endpoint for load balancer monitoring.
+
+    Returns:
+        tuple: JSON response with service status and HTTP 200
+    """
     return jsonify({
         'status': 'healthy',
         'service': 'CodeDetect API',
@@ -354,7 +432,15 @@ def health_check():
 
 @app.route('/api/info', methods=['GET'])
 def app_info():
-    """Application information endpoint - shows deployment details"""
+    """
+    Application information endpoint showing deployment details.
+
+    Returns metadata about current deployment including version,
+    environment, and security configuration.
+
+    Returns:
+        tuple: JSON response with deployment info and HTTP 200
+    """
     # Get deployment info from environment variables (injected by GitHub Actions/Terraform)
     docker_tag = os.environ.get('DOCKER_TAG', 'unknown')
     deployment_time = os.environ.get('DEPLOYMENT_TIME', 'unknown')
@@ -413,18 +499,45 @@ def get_history():
 
 @app.route('/api/report', methods=['POST'])
 def submit_report():
-    """Handle user feedback/bug reports via AWS SNS"""
+    """
+    Handle user feedback and bug reports via AWS SNS.
+
+    Validates input, sends notification via SNS to configured topic.
+
+    Returns:
+        tuple: JSON response with success/error message and HTTP status code
+    """
     try:
         data = request.get_json()
-        email = data.get('email', '')
-        report_type = data.get('type', 'unknown')
-        message = data.get('message', '')
+        email = data.get('email', '').strip()
+        report_type = data.get('type', '').strip()
+        message = data.get('message', '').strip()
         timestamp = data.get('timestamp', datetime.now().isoformat())
         user_agent = data.get('user_agent', 'unknown')
 
-        # Validation
+        # Input validation
         if not email or not report_type or not message:
             return jsonify({'error': 'Email, type and message are required'}), 400
+
+        # Validate email format
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        # Validate email length
+        if len(email) > 100:
+            return jsonify({'error': 'Email address too long'}), 400
+
+        # Validate report type
+        valid_types = ['bug', 'feature', 'feedback']
+        if report_type not in valid_types:
+            return jsonify({'error': f'Invalid report type. Must be one of: {", ".join(valid_types)}'}), 400
+
+        # Validate message length
+        if len(message) > 500:
+            return jsonify({'error': 'Message must be 500 characters or less'}), 400
+        if len(message) < 1:
+            return jsonify({'error': 'Message cannot be empty'}), 400
 
         # Prepare SNS message
         sns_message = f"""
@@ -449,7 +562,7 @@ Reply to: {email}
             topic_arn = os.environ.get('SNS_TOPIC_ARN')
 
             if not topic_arn:
-                print("⚠️ SNS_TOPIC_ARN not configured")
+                logger.warning("SNS_TOPIC_ARN not configured")
                 return jsonify({'error': 'SNS not configured'}), 500
 
             response = sns.publish(
@@ -458,24 +571,32 @@ Reply to: {email}
                 Message=sns_message
             )
 
-            print(f"✅ SNS notification sent: {response['MessageId']}")
+            logger.info(f"SNS notification sent: {response['MessageId']}")
             return jsonify({
                 'success': True,
                 'message': 'Report sent successfully'
             }), 200
 
         except Exception as e:
-            print(f"❌ SNS Error: {e}")
+            logger.error(f"SNS Error: {e}")
             return jsonify({'error': 'Failed to send notification'}), 500
 
     except Exception as e:
-        print(f"❌ Report submission error: {e}")
+        logger.error(f"Report submission error: {e}")
         return jsonify({'error': 'Failed to process report'}), 500
 
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    """Get overall statistics for dashboard trends"""
+    """
+    Get anonymous aggregate statistics for dashboard trends.
+
+    Returns overall statistics and recent trend data without
+    exposing individual user data.
+
+    Returns:
+        tuple: JSON response with statistics and HTTP status code
+    """
     try:
         # Get last 10 analyses for trends
         recent_analyses = Analysis.query.order_by(
@@ -518,10 +639,11 @@ def get_stats():
         }), 200
 
     except Exception as e:
+        logger.error(f"Stats retrieval error: {e}")
         return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
-    print("🚀 Starting CodeDetect Application...")
-    print("🌐 Running on http://localhost:5000")
+    logger.info("Starting CodeDetect Application...")
+    logger.info("Running on http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -47,7 +47,7 @@ variable "active_environment" {
 variable "owner_email" {
   description = "Email address of the project owner"
   type        = string
-  default     = "nyeinthunaing322@gmail.com" # CHANGE THIS!
+  default     = "your-email@example.com" # CHANGE THIS!
 }
 
 # ----------------------------------------------------------------------------
@@ -105,11 +105,11 @@ variable "key_pair_name" {
 variable "allowed_ssh_ip" {
   description = "Your IP address allowed to SSH (CIDR format)"
   type        = string
-  default     = "0.0.0.0/0" # WARNING: Allows from anywhere - CHANGE THIS!
+  default     = "80.233.75.162/32" # Your current IP address (auto-detected)
 
-  # Get your IP: Go to https://whatismyip.com
+  # NOTE: If your IP changes, update this value or use 0.0.0.0/0 temporarily
+  # Get your current IP: curl https://api.ipify.org
   # Then use format: YOUR_IP/32
-  # Example: "203.0.113.45/32"
 }
 
 # ----------------------------------------------------------------------------
@@ -290,7 +290,7 @@ variable "enable_https" {
 variable "notification_email" {
   description = "Email address for SNS notifications"
   type        = string
-  default     = "nyeinthunaing322@gmail.com"
+  default     = "your-email@example.com" # CHANGE THIS!
 }
 
 # Enable CloudWatch monitoring
