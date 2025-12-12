@@ -78,10 +78,7 @@ terraform/SECRETS_UPDATE.md
 terraform/*.tfplan
 terraform/tfplan
 
-# Test files and temporary scripts
-test_*.py
-test_*.json
-*_test.py
+# Test files and temporary scripts (but keep tests/ directory)
 super_vulnerable.py
 
 # Utility/Debug scripts (not needed in repo)
