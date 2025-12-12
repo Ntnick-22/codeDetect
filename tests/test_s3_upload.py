@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test S3 upload functionality"""
 import boto3
+from botocore.exceptions import NoCredentialsError
 from datetime import datetime
 import os
 
@@ -48,7 +49,7 @@ try:
 
 except FileNotFoundError as e:
     print(f"[ERROR] File not found: {e}")
-except boto3.exceptions.NoCredentialsError:
+except NoCredentialsError:
     print("[ERROR] AWS credentials not available. Run 'aws configure'")
 except Exception as e:
     print(f"[ERROR] FAILED: {type(e).__name__}")
