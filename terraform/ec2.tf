@@ -231,6 +231,7 @@ locals {
     cat > /home/ec2-user/app/.env <<ENVFILE
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
+DOCKER_IMAGE=${var.docker_image_repo}:${var.docker_tag}
 DEPLOYMENT_TIME=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=\$(echo "${var.docker_tag}" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
 DEPLOYED_BY=github-actions
@@ -256,6 +257,7 @@ ENVFILE
     cat > /home/ec2-user/app/.env <<ENVFILE
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
+DOCKER_IMAGE=${var.docker_image_repo}:${var.docker_tag}
 DEPLOYMENT_TIME=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=\$(echo "${var.docker_tag}" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
 DEPLOYED_BY=github-actions
