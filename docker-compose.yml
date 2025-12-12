@@ -17,7 +17,9 @@ services:
   # CODEDETECT APPLICATION
   # =========================================================================
   codedetect:
-    image: codedetect-app:latest
+    # Use Docker Hub image in production, or local build in development
+    # Set DOCKER_IMAGE env var to override (e.g., nyeinthunaing/codedetect:latest)
+    image: ${DOCKER_IMAGE:-codedetect-app:latest}
     build:
       context: .
       dockerfile: Dockerfile
