@@ -252,6 +252,7 @@ ENVFILE
     echo "DB_NAME=${var.db_name}" >> /home/ec2-user/app/.env
     echo "DB_USERNAME=${var.db_username}" >> /home/ec2-user/app/.env
     echo "DB_PASSWORD=$DB_PASSWORD" >> /home/ec2-user/app/.env
+    echo "DATABASE_URL=postgresql://${var.db_username}:$DB_PASSWORD@$RDS_ENDPOINT/${var.db_name}" >> /home/ec2-user/app/.env
     %{else}
     # Using SQLite (fallback)
     cat > /home/ec2-user/app/.env <<ENVFILE

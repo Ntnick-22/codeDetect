@@ -30,11 +30,8 @@ services:
     env_file:
       - .env  # Load deployment metadata from .env file (created by Terraform)
     environment:
-      # Database connection string
-      # Format: postgresql://username:password@host:port/database
-      # RDS_ENDPOINT = RDS PostgreSQL hostname (fetched by EC2 user data script)
-      # Falls back to SQLite if RDS_ENDPOINT not set (for local development)
-      - DATABASE_URL=${RDS_ENDPOINT:+postgresql://${DB_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}/${DB_NAME}}${RDS_ENDPOINT:-sqlite:///codedetect.db}
+      # DATABASE_URL is constructed in the .env file by Terraform
+      # No need to override here - just inherit from .env
       - FLASK_ENV=${FLASK_ENV:-production}
     volumes:
       # ===================================================================
