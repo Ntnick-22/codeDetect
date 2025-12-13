@@ -644,6 +644,10 @@ def get_stats():
 
 
 if __name__ == '__main__':
+    # SECURITY: Only enable debug mode via environment variable (default: False)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
+
     logger.info("Starting CodeDetect Application...")
+    logger.info(f"Debug mode: {debug_mode}")
     logger.info("Running on http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
