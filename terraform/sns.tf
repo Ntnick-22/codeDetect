@@ -42,12 +42,16 @@ resource "aws_sns_topic" "user_feedback" {
 resource "aws_sns_topic_subscription" "user_feedback_email" {
   topic_arn = aws_sns_topic.user_feedback.arn
   protocol  = "email"
-  endpoint  = var.notification_email # From variables.tf
+  # Use +feedback to avoid Gmail bounce issues
+  endpoint  = replace(var.notification_email, "@", "+feedback@")
 
   # IMPORTANT: After terraform apply, you MUST:
   # 1. Check your email for "AWS Notification - Subscription Confirmation"
   # 2. Click "Confirm subscription" link
   # 3. The link is valid for 3 days - if it expires, run terraform apply again
+  #
+  # Using +feedback trick: nyeinthunaing322+feedback@gmail.com
+  # This bypasses Gmail's bounce detection while delivering to same inbox
 }
 
 # ----------------------------------------------------------------------------
