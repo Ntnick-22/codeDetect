@@ -8,8 +8,8 @@ subdomain   = "codedetect"
 owner_email        = "nyeinthunaing322@gmail.com"
 notification_email = "nyeinthunaing322@gmail.com"
 
-# Security - CHANGE THIS!
-allowed_ssh_ip = "0.0.0.0/0" # TODO: Change to YOUR_IP/32 after testing
+# Security - SSH access from anywhere (dynamic IP)
+allowed_ssh_ip = "0.0.0.0/0" # Allow from anywhere since IP changes dynamically
 
 # Storage (must be globally unique!)
 s3_bucket_name = "codedetect-nick-uploads-12345"

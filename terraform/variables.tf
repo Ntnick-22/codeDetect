@@ -105,9 +105,9 @@ variable "key_pair_name" {
 variable "allowed_ssh_ip" {
   description = "Your IP address allowed to SSH (CIDR format)"
   type        = string
-  default     = "80.233.75.162/32" # Your current IP address (auto-detected)
+  default     = "0.0.0.0/0" # Allow from anywhere (dynamic IP)
 
-  # NOTE: If your IP changes, update this value or use 0.0.0.0/0 temporarily
+  # NOTE: For better security, restrict to YOUR_IP/32 if IP is static
   # Get your current IP: curl https://api.ipify.org
   # Then use format: YOUR_IP/32
 }
