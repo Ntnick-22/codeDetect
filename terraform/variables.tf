@@ -218,18 +218,16 @@ variable "enable_dns" {
   type        = bool
   default     = true # Enabled - we have the nt-nick.link hosted zone
 
-  # Set to true only if:
-  # 1. You have a Route53 hosted zone
-  # 2. You want Terraform to manage DNS records
+
 }
 
-# Your domain name
+# domain 
 variable "domain_name" {
   description = "nt-nick.link"
   type        = string
   default     = "nt-nick.link"
 
-  # Example: "yourdomain.com"
+
 }
 
 # Subdomain for the app
@@ -238,7 +236,7 @@ variable "subdomain" {
   type        = string
   default     = "codedetect"
 
-  # Full URL will be: codedetect.yourdomain.com
+
 }
 
 # ----------------------------------------------------------------------------
@@ -290,7 +288,7 @@ variable "enable_https" {
 variable "notification_email" {
   description = "Email address for SNS notifications"
   type        = string
-  default     = "your-email@example.com" # CHANGE THIS!
+  default     = "your-email@example.com"  # Override via GitHub Secrets or .tfvars
 }
 
 # Enable CloudWatch monitoring

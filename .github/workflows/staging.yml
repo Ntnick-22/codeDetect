@@ -70,12 +70,12 @@ jobs:
       - name: Terraform Plan for Staging
         run: |
           cd terraform
-          terraform plan -var-file="staging.tfvars" -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform plan -var-file="staging.tfvars" -var="db_password=${{ secrets.DB_PASSWORD }}" -var="notification_email=${{ secrets.NOTIFICATION_EMAIL }}"
 
       - name: Terraform Apply for Staging
         run: |
           cd terraform
-          terraform apply -auto-approve -var-file="staging.tfvars" -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform apply -auto-approve -var-file="staging.tfvars" -var="db_password=${{ secrets.DB_PASSWORD }}" -var="notification_email=${{ secrets.NOTIFICATION_EMAIL }}"
 
       - name: Wait for Staging Instances to be Healthy
         run: |

@@ -273,6 +273,7 @@ jobs:
             -var="active_environment=$TARGET_ENV" \
             -var="docker_tag=$DOCKER_TAG" \
             -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="notification_email=${{ secrets.NOTIFICATION_EMAIL }}" \
             -out=tfplan; then
             echo "Terraform plan failed!"
             echo "Showing detailed error logs..."
@@ -280,6 +281,7 @@ jobs:
               -var="active_environment=$TARGET_ENV" \
               -var="docker_tag=$DOCKER_TAG" \
               -var="db_password=${{ secrets.DB_PASSWORD }}" \
+              -var="notification_email=${{ secrets.NOTIFICATION_EMAIL }}" \
               -no-color
             exit 1
           fi
