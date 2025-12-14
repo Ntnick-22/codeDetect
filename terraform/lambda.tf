@@ -32,7 +32,7 @@ resource "aws_lambda_function" "feedback_handler" {
   environment {
     variables = {
       RECIPIENT_EMAIL = var.notification_email
-      SOURCE_EMAIL    = "noreply@codedetect.app"  # Change to your verified SES domain
+      SOURCE_EMAIL    = var.notification_email  # Use same verified email as sender
     }
   }
 
