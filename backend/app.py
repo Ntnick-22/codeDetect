@@ -477,12 +477,26 @@ def health_check():
 def debug_tools():
     """Debug endpoint to check if security tools are installed"""
     import shutil
+
+    # Create a test file with obvious security issue
+    test_file = '/tmp/test_bandit.py'
+    with open(test_file, 'w') as f:
+        f.write('import os\nos.system("rm -rf /")\n')
+
+    # Run bandit on test file
+    bandit_test = subprocess.run(
+        ['bandit', test_file, '-f', 'json'],
+        capture_output=True, text=True, check=False
+    )
+
     return jsonify({
         'bandit_path': shutil.which('bandit'),
         'radon_path': shutil.which('radon'),
         'pylint_path': shutil.which('pylint'),
         'python_version': subprocess.run(['python', '--version'], capture_output=True, text=True).stdout,
-        'pip_list': subprocess.run(['pip', 'list'], capture_output=True, text=True).stdout[:1000]
+        'bandit_test_exit_code': bandit_test.returncode,
+        'bandit_test_stdout': bandit_test.stdout[:2000],
+        'bandit_test_stderr': bandit_test.stderr[:500]
     }), 200
 
 
