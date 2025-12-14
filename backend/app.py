@@ -185,6 +185,8 @@ def run_bandit(filepath):
         list: List of security issues found, empty list if error or no issues
     """
     try:
+        logger.info(f"Running Bandit on: {filepath}")
+
         # Bandit returns exit code 1 when issues found - this is NORMAL!
         # Don't treat it as an error
         result = subprocess.run(
@@ -193,25 +195,35 @@ def run_bandit(filepath):
             check=False  # Don't raise exception on non-zero exit code
         )
 
+        logger.info(f"Bandit exit code: {result.returncode}")
+        logger.info(f"Bandit stdout length: {len(result.stdout) if result.stdout else 0}")
+        logger.info(f"Bandit stderr length: {len(result.stderr) if result.stderr else 0}")
+
         # Parse JSON output
         if result.stdout:
             try:
                 data = json.loads(result.stdout)
                 issues = data.get('results', [])
                 logger.info(f"Bandit found {len(issues)} security issues")
+
+                # Log first issue for debugging
+                if issues:
+                    logger.info(f"First security issue: {issues[0].get('issue_text', 'N/A')}")
+
                 return issues
             except json.JSONDecodeError as e:
-                logger.warning(f"Bandit JSON parse error: {e}")
-                logger.warning(f"Raw output: {result.stdout[:500]}")
+                logger.error(f"Bandit JSON parse error: {e}")
+                logger.error(f"Raw stdout: {result.stdout[:1000]}")
                 return []
 
         # Check stderr for errors
         if result.stderr:
-            logger.warning(f"Bandit stderr: {result.stderr}")
+            logger.warning(f"Bandit stderr: {result.stderr[:500]}")
 
+        logger.warning("Bandit returned no stdout - returning empty list")
         return []
     except Exception as e:
-        logger.error(f"Bandit error: {e}")
+        logger.error(f"Bandit exception: {e}")
         traceback.print_exc()
         return []
 
@@ -227,15 +239,31 @@ def run_radon(filepath):
         dict: Complexity data for functions, empty dict if error
     """
     try:
+        logger.info(f"Running Radon on: {filepath}")
+
         result = subprocess.run(
             ['radon', 'cc', filepath, '-j'],
-            capture_output=True, text=True, timeout=30
+            capture_output=True, text=True, timeout=30,
+            check=False
         )
+
+        logger.info(f"Radon exit code: {result.returncode}")
+        logger.info(f"Radon stdout length: {len(result.stdout) if result.stdout else 0}")
+
         if result.stdout:
-            return json.loads(result.stdout)
+            complexity_data = json.loads(result.stdout)
+            high_complexity = sum(
+                1 for file_data in complexity_data.values()
+                for func in file_data if func.get('complexity', 0) > 10
+            )
+            logger.info(f"Radon found {high_complexity} high complexity functions")
+            return complexity_data
+
+        logger.warning("Radon returned no stdout")
         return {}
     except Exception as e:
         logger.error(f"Radon error: {e}")
+        traceback.print_exc()
         return {}
 
 
