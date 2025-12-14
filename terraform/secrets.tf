@@ -112,8 +112,10 @@ resource "aws_ssm_parameter" "s3_bucket" {
 resource "aws_ssm_parameter" "database_url" {
   name        = "/${local.app_name}/${var.environment}/database/url"
   description = "Database connection URL"
-  type        = "SecureString"                          # Secure in case it contains password later
-  value       = "sqlite:////app/instance/codedetect.db" # Current SQLite path
+  type        = "SecureString"
+
+  # Use RDS PostgreSQL if enabled, otherwise fallback to SQLite
+  value = var.use_rds ? "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres[0].address}:${aws_db_instance.postgres[0].port}/${var.db_name}" : "sqlite:////app/instance/codedetect.db"
 
   tags = merge(
     local.common_tags,
