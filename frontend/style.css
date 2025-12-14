@@ -240,6 +240,12 @@ body {
     padding: 1.5rem;
 }
 
+/* Chart canvas sizing - make donut chart smaller */
+canvas {
+    max-height: 300px !important;
+    max-width: 100% !important;
+}
+
 /* ============================================
    STATS GRID
    ============================================ */

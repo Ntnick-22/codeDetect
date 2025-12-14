@@ -513,27 +513,30 @@ function createCharts(data) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            aspectRatio: 1.5,
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 15,
+                        padding: 10,
                         font: {
-                            size: 12
-                        }
+                            size: 11
+                        },
+                        color: '#000000'
                     }
                 },
                 title: {
                     display: true,
                     text: 'Issue Distribution',
                     font: {
-                        size: 14,
+                        size: 13,
                         weight: 'bold'
                     },
                     padding: {
-                        top: 10,
-                        bottom: 20
-                    }
+                        top: 5,
+                        bottom: 10
+                    },
+                    color: '#000000'
                 }
             }
         }

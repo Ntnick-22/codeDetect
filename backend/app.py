@@ -539,25 +539,19 @@ def submit_report():
         if len(message) < 1:
             return jsonify({'error': 'Message cannot be empty'}), 400
 
-        # Prepare SNS message
-        sns_message = f"""
-CodeDetect Feedback Report
-==========================
-
-From: {email}
-Type: {report_type}
-Time: {timestamp}
-User Agent: {user_agent}
-
-Message:
-{message}
-
----
-Reply to: {email}
-        """
+        # Prepare SNS message in JSON format for Lambda
+        sns_message = {
+            'name': email.split('@')[0],  # Extract name from email
+            'email': email,
+            'type': report_type.title(),
+            'message': message,
+            'timestamp': timestamp,
+            'user_agent': user_agent
+        }
 
         # Send to SNS
         try:
+            import json
             sns = boto3.client('sns', region_name='eu-west-1')
             topic_arn = os.environ.get('SNS_TOPIC_ARN')
 
@@ -568,7 +562,7 @@ Reply to: {email}
             response = sns.publish(
                 TopicArn=topic_arn,
                 Subject=f'CodeDetect: {report_type.upper()} Report',
-                Message=sns_message
+                Message=json.dumps(sns_message)  # Send as JSON string
             )
 
             logger.info(f"SNS notification sent: {response['MessageId']}")
