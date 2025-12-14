@@ -137,25 +137,7 @@ resource "aws_iam_policy" "github_actions" {
         Sid    = "LambdaPermissions"
         Effect = "Allow"
         Action = [
-          "lambda:CreateFunction",
-          "lambda:DeleteFunction",
-          "lambda:GetFunction",
-          "lambda:GetFunctionConfiguration",
-          "lambda:UpdateFunctionCode",
-          "lambda:UpdateFunctionConfiguration",
-          "lambda:ListFunctions",
-          "lambda:ListVersionsByFunction",
-          "lambda:PublishVersion",
-          "lambda:CreateAlias",
-          "lambda:DeleteAlias",
-          "lambda:GetAlias",
-          "lambda:UpdateAlias",
-          "lambda:AddPermission",
-          "lambda:RemovePermission",
-          "lambda:GetPolicy",
-          "lambda:TagResource",
-          "lambda:UntagResource",
-          "lambda:ListTags"
+          "lambda:*"
         ]
         Resource = "*"
       },
