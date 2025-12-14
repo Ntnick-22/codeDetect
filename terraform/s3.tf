@@ -89,16 +89,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     }
   }
 
-  # Optional: Auto-delete uploaded files after 90 days
-  # Uncomment if you want automatic cleanup
-  # rule {
-  #   id     = "expire-old-files"
-  #   status = "Enabled"
-  #
-  #   expiration {
-  #     days = 90
-  #   }
-  # }
+  # Auto-delete uploaded files after 7 days (privacy + cost savings)
+  rule {
+    id     = "expire-old-files"
+    status = "Enabled"
+
+    filter {} # Apply to all uploaded files
+
+    expiration {
+      days = 7
+    }
+  }
 }
 
 # ============================================================================

@@ -97,11 +97,9 @@ variable "key_pair_name" {
   type        = string
   default     = "codedetect-key"
 
-  # You'll need to create this key pair manually in AWS Console first
-  # Or we can create it with Terraform (see ec2.tf)
 }
 
-# Allow SSH from specific IP only (for security)
+# Allow SSH from anywhere for now (to be changed later)my ip has issue with dynamic changing
 variable "allowed_ssh_ip" {
   description = "Your IP address allowed to SSH (CIDR format)"
   type        = string

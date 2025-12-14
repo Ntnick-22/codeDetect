@@ -72,16 +72,11 @@ locals {
     # Create uploads directory on EFS (shared file uploads)
     mkdir -p /mnt/efs/uploads
 
-    # Create database directory on EFS (shared SQLite database)
-    mkdir -p /mnt/efs/database
-
     # Set ownership to ec2-user so Docker can write to it
     chown -R ec2-user:ec2-user /mnt/efs/postgres
     chown -R ec2-user:ec2-user /mnt/efs/uploads
-    chown -R ec2-user:ec2-user /mnt/efs/database
     chmod -R 755 /mnt/efs/postgres
     chmod -R 755 /mnt/efs/uploads
-    chmod -R 755 /mnt/efs/database
 
     echo "EFS mounted successfully at /mnt/efs" >> /var/log/codedetect-deploy.log
     # ========================================================================
@@ -188,7 +183,7 @@ locals {
     echo "Fetching secrets from Parameter Store..." >> /var/log/codedetect-deploy.log
 
     # Fetch database password
-    DB_PASSWORD=$(aws ssm get-parameter \
+    DB_PASSWORD=$(aws ssm get-paramweter \
       --name "codedetect-prod-db-password" \
       --with-decryption \
       --region ${var.aws_region} \
@@ -203,97 +198,54 @@ locals {
     fi
 
     # ========================================================================
-    # Fetch RDS endpoint (if RDS is enabled)
-    # ========================================================================
-    %{if var.use_rds}
-    echo "Fetching RDS endpoint from Terraform outputs..." >> /var/log/codedetect-deploy.log
-    RDS_ENDPOINT="${aws_db_instance.postgres[0].endpoint}"
-    RDS_ADDRESS="${aws_db_instance.postgres[0].address}"
-
-    if [ -z "$RDS_ENDPOINT" ]; then
-      echo "ERROR: RDS endpoint not found!" >> /var/log/codedetect-deploy.log
-      exit 1
-    fi
-
-    echo "RDS endpoint: $RDS_ENDPOINT" >> /var/log/codedetect-deploy.log
-    %{else}
-    echo "RDS not enabled - using SQLite" >> /var/log/codedetect-deploy.log
-    RDS_ENDPOINT=""
-    RDS_ADDRESS=""
-    %{endif}
-    # ========================================================================
-
-    # ========================================================================
     # Create environment file with deployment metadata
     # These will be injected into Docker container for the /api/info endpoint
-    %{if var.use_rds}
-    # Using RDS PostgreSQL
     cat > /home/ec2-user/app/.env <<ENVFILE
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
-DOCKER_IMAGE=${var.docker_image_repo}:${var.docker_tag}
-DEPLOYMENT_TIME=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-GIT_COMMIT=\$(echo "${var.docker_tag}" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
+DEPLOYMENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=$(echo ${var.docker_tag} | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
 DEPLOYED_BY=github-actions
 ACTIVE_ENVIRONMENT=${var.active_environment}
-INSTANCE_ID=\$(ec2-metadata --instance-id | cut -d " " -f 2)
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
 
 # Application Configuration
 FLASK_ENV=prod
 S3_BUCKET_NAME=${var.s3_bucket_name}
 AWS_REGION=${var.aws_region}
 
-# Database Configuration - AWS RDS PostgreSQL
+# Database Configuration
+# PostgreSQL running in Docker (not SQLite anymore!)
+# The DATABASE_URL will be constructed by docker-compose.yml
+DB_PASSWORD=$DB_PASSWORD
 ENVFILE
-
-    # Append RDS-specific variables (contains sensitive data)
-    echo "RDS_ENDPOINT=$RDS_ENDPOINT" >> /home/ec2-user/app/.env
-    echo "RDS_ADDRESS=$RDS_ADDRESS" >> /home/ec2-user/app/.env
-    echo "DB_NAME=${var.db_name}" >> /home/ec2-user/app/.env
-    echo "DB_USERNAME=${var.db_username}" >> /home/ec2-user/app/.env
-    echo "DB_PASSWORD=$DB_PASSWORD" >> /home/ec2-user/app/.env
-    %{else}
-    # Using SQLite (fallback)
-    cat > /home/ec2-user/app/.env <<ENVFILE
-# Deployment Information
-DOCKER_TAG=${var.docker_tag}
-DOCKER_IMAGE=${var.docker_image_repo}:${var.docker_tag}
-DEPLOYMENT_TIME=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-GIT_COMMIT=\$(echo "${var.docker_tag}" | grep -o '[a-f0-9]\{7\}' | head -1 || echo "unknown")
-DEPLOYED_BY=github-actions
-ACTIVE_ENVIRONMENT=${var.active_environment}
-INSTANCE_ID=\$(ec2-metadata --instance-id | cut -d " " -f 2)
-
-# Application Configuration
-FLASK_ENV=prod
-S3_BUCKET_NAME=${var.s3_bucket_name}
-AWS_REGION=${var.aws_region}
-
-# Database Configuration - SQLite (local development)
-ENVFILE
-    %{endif}
 
     chown ec2-user:ec2-user /home/ec2-user/app/.env
-    echo "Environment variables configured" >> /var/log/codedetect-deploy.log
+    echo "Environment variables configured (including DB_PASSWORD)" >> /var/log/codedetect-deploy.log
     # ========================================================================
 
     # ========================================================================
-    # RDS SETUP - NO LOCK NEEDED
+    # POSTGRESQL LOCK - Only one instance should run PostgreSQL
     # ========================================================================
-    %{if var.use_rds}
-    # Using AWS RDS PostgreSQL
-    # - Both EC2 instances connect to same RDS database
-    # - No lock file needed (RDS handles concurrent connections)
-    # - No local PostgreSQL container running
-    echo "Using AWS RDS PostgreSQL - both instances will connect to same database" >> /var/log/codedetect-deploy.log
-    %{else}
-    # Using SQLite on EFS (not recommended for production)
-    echo "Using SQLite on EFS" >> /var/log/codedetect-deploy.log
-    %{endif}
+    # PostgreSQL data directory can only be used by ONE process at a time
+    # Use a lock file on EFS to coordinate which instance runs the database
+    LOCK_FILE="/mnt/efs/postgres.lock"
+
+    if [ ! -f "$LOCK_FILE" ]; then
+      # No lock file exists, this instance will run PostgreSQL
+      echo "$(hostname):$(date)" > "$LOCK_FILE"
+      echo "This instance will run PostgreSQL database" >> /var/log/codedetect-deploy.log
+      COMPOSE_PROFILES="with-db"
+    else
+      # Lock file exists, another instance is running PostgreSQL
+      echo "PostgreSQL already running on: $(cat $LOCK_FILE)" >> /var/log/codedetect-deploy.log
+      echo "This instance will connect to existing database" >> /var/log/codedetect-deploy.log
+      COMPOSE_PROFILES="no-db"
+    fi
     # ========================================================================
 
-    # Now start application
-    su - ec2-user -c "cd /home/ec2-user/app && docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
+    # Now start application with EFS storage
+    su - ec2-user -c "cd /home/ec2-user/app && COMPOSE_PROFILES=$COMPOSE_PROFILES docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
 
     echo "=== Deployment complete at $(date) ===" >> /var/log/codedetect-deploy.log
     echo "Application auto-deployed!" > /home/ec2-user/deployment-complete.txt
@@ -434,9 +386,9 @@ resource "aws_iam_role_policy" "ec2_ssm_access" {
       {
         Effect = "Allow"
         Action = [
-          "ssm:GetParameter",       # Read a single parameter
-          "ssm:GetParameters",      # Read multiple parameters at once
-          "ssm:GetParametersByPath" # Read all parameters under a path
+          "ssm:GetParameter",        # Read a single parameter
+          "ssm:GetParameters",       # Read multiple parameters at once
+          "ssm:GetParametersByPath"  # Read all parameters under a path
         ]
         # Restrict to only our project's parameters
         # Supports both hierarchical (/codedetect/prod/*) and flat (codedetect-prod-*) naming
