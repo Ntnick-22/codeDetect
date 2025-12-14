@@ -376,11 +376,26 @@ def analyze_code():
             # User can check console output for errors
 
         # Run analyses
+        logger.info(f"=== STARTING ANALYSIS FOR: {filepath} ===")
+
         pylint_results = run_pylint(filepath)
+        logger.info(f"Pylint returned {len(pylint_results)} issues")
+
         bandit_results = run_bandit(filepath)
+        logger.critical(f"BANDIT RETURNED {len(bandit_results)} SECURITY ISSUES!")
+        print(f"[DEBUG] BANDIT RETURNED {len(bandit_results)} SECURITY ISSUES!", flush=True)
+        if bandit_results:
+            logger.critical(f"First Bandit issue: {bandit_results[0]}")
+            print(f"[DEBUG] First Bandit issue: {bandit_results[0]}", flush=True)
+        else:
+            print(f"[DEBUG] BANDIT ARRAY IS EMPTY - NO ISSUES DETECTED!", flush=True)
+
         complexity_results = run_radon(filepath)
+        logger.info(f"Radon returned {len(complexity_results)} files")
+
         score = calculate_score(
             pylint_results, bandit_results, complexity_results)
+        logger.info(f"Final score: {score}")
 
         response = {
             'filename': filename,
@@ -455,6 +470,19 @@ def health_check():
         'service': 'CodeDetect API',
         'version': '1.1.0',
         'timestamp': datetime.now().isoformat()
+    }), 200
+
+
+@app.route('/api/debug/tools', methods=['GET'])
+def debug_tools():
+    """Debug endpoint to check if security tools are installed"""
+    import shutil
+    return jsonify({
+        'bandit_path': shutil.which('bandit'),
+        'radon_path': shutil.which('radon'),
+        'pylint_path': shutil.which('pylint'),
+        'python_version': subprocess.run(['python', '--version'], capture_output=True, text=True).stdout,
+        'pip_list': subprocess.run(['pip', 'list'], capture_output=True, text=True).stdout[:1000]
     }), 200
 
 
