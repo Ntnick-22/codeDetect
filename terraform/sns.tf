@@ -33,26 +33,19 @@ resource "aws_sns_topic" "user_feedback" {
 }
 
 # ----------------------------------------------------------------------------
-# SNS SUBSCRIPTION - Email Notification
+# SNS SUBSCRIPTION - Lambda Handler
 # ----------------------------------------------------------------------------
 
-# WHAT: Email subscription to receive user feedback
-# Uses the same email as monitoring alerts, but you could use different emails
-
-resource "aws_sns_topic_subscription" "user_feedback_email" {
-  topic_arn = aws_sns_topic.user_feedback.arn
-  protocol  = "email"
-  # Use plain email - Gmail +alias trick might cause bounces
-  endpoint  = var.notification_email
-
-  # IMPORTANT: After terraform apply, you MUST:
-  # 1. Check your email for "AWS Notification - Subscription Confirmation"
-  # 2. Click "Confirm subscription" link
-  # 3. The link is valid for 3 days - if it expires, run terraform apply again
-  #
-  # Using +feedback trick: nyeinthunaing322+feedback@gmail.com
-  # This bypasses Gmail's bounce detection while delivering to same inbox
-}
+# NOTE: Email subscription removed - now using Lambda + SES instead
+# This is configured in lambda.tf:
+# - aws_sns_topic_subscription.feedback_lambda (SNS → Lambda)
+# - aws_lambda_function.feedback_handler (formats and sends via SES)
+#
+# Benefits:
+# - No email bounce issues
+# - Reply-to support (can reply directly to users)
+# - Custom HTML formatting
+# - Better deliverability via SES
 
 # ----------------------------------------------------------------------------
 # SNS TOPIC POLICY - Allow Application to Publish
