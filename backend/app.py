@@ -67,24 +67,51 @@ db = SQLAlchemy(app)
 class Analysis(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # Anonymous field - just for identification, not real filename
-    file_hash = db.Column(db.String(64), nullable=True)  # Changed from filename
+    file_hash = db.Column(db.String(64), nullable=True, unique=True, index=True)  # Unique session identifier
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     score = db.Column(db.Integer, nullable=False)
     total_issues = db.Column(db.Integer, default=0)
     security_issues = db.Column(db.Integer, default=0)
     complexity_issues = db.Column(db.Integer, default=0)
-    # DO NOT store full analysis_data (contains code)
-    # analysis_data = db.Column(db.Text)  # REMOVED for privacy
+
+    # S3 file reference (for retrieving uploaded file)
+    s3_bucket = db.Column(db.String(100), nullable=True)
+    s3_key = db.Column(db.String(500), nullable=True)
+
+    # Store analysis results as JSON (keeps results even after file expires)
+    analysis_data = db.Column(db.Text, nullable=True)  # JSON string with analysis results
 
     def to_dict(self):
-        return {
+        result = {
             'id': self.id,
+            'file_hash': self.file_hash,
             'timestamp': self.timestamp.isoformat(),
             'score': self.score,
             'total_issues': self.total_issues,
             'security_issues': self.security_issues,
             'complexity_issues': self.complexity_issues
         }
+
+        # Include analysis data if available
+        if self.analysis_data:
+            try:
+                result['analysis'] = json.loads(self.analysis_data)
+            except:
+                pass
+
+        # Generate S3 presigned URL if file still exists
+        if self.s3_bucket and self.s3_key:
+            try:
+                s3 = boto3.client('s3', region_name='eu-west-1')
+                result['s3_url'] = s3.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.s3_bucket, 'Key': self.s3_key},
+                    ExpiresIn=3600  # 1 hour
+                )
+            except:
+                pass
+
+        return result
 
 
 with app.app_context():
@@ -429,25 +456,42 @@ def analyze_code():
         except Exception as e:
             logger.error(f"Failed to create presigned URL: {e}")
 
-        # Save to DB (ANONYMOUS - no filename or code content)
-        # Only store aggregate stats for platform analytics
+        # Save to DB with full analysis results for persistence
         try:
-            # Create cryptographically secure random hash for anonymity
+            # Create unique session identifier
             file_hash = secrets.token_hex(16)
 
+            # Store analysis results as JSON
+            analysis_json = json.dumps({
+                'quality_issues': pylint_results[:10],
+                'security_issues': bandit_results,
+                'complexity': complexity_results,
+                'summary': response['summary'],
+                'filename': filename,  # Store for user reference
+                'original_code': original_code
+            })
+
             new_analysis = Analysis(
-                file_hash=file_hash,  # Anonymous identifier
+                file_hash=file_hash,
                 score=score,
                 total_issues=len(pylint_results),
                 security_issues=len(bandit_results),
-                complexity_issues=response['summary']['high_complexity_functions']
-                # NO filename, NO analysis_data (privacy-first!)
+                complexity_issues=response['summary']['high_complexity_functions'],
+                s3_bucket=bucket_name,
+                s3_key=s3_key,
+                analysis_data=analysis_json
             )
             db.session.add(new_analysis)
             db.session.commit()
-            logger.info(f"Anonymous analytics saved (hash: {file_hash})")
+            logger.info(f"Analysis saved with hash: {file_hash}")
+
+            # Return the file_hash so frontend can retrieve results later
+            response['file_hash'] = file_hash
+
         except Exception as e:
-            logger.warning(f"Database save error (non-critical): {e}")
+            logger.error(f"Database save error: {e}")
+            traceback.print_exc()
+            # Continue anyway - analysis still works without persistence
 
         os.remove(filepath)  # cleanup local file
         return jsonify(response), 200
@@ -648,6 +692,33 @@ def submit_report():
     except Exception as e:
         logger.error(f"Report submission error: {e}")
         return jsonify({'error': 'Failed to process report'}), 500
+
+
+@app.route('/api/analysis/<file_hash>', methods=['GET'])
+def get_analysis(file_hash):
+    """
+    Retrieve analysis results by file hash.
+
+    This endpoint allows retrieving previously analyzed files even after
+    page refresh, solving the persistence problem.
+
+    Args:
+        file_hash (str): Unique identifier for the analysis
+
+    Returns:
+        tuple: JSON response with analysis results and HTTP status code
+    """
+    try:
+        analysis = Analysis.query.filter_by(file_hash=file_hash).first()
+
+        if not analysis:
+            return jsonify({'error': 'Analysis not found'}), 404
+
+        return jsonify(analysis.to_dict()), 200
+
+    except Exception as e:
+        logger.error(f"Analysis retrieval error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/stats', methods=['GET'])

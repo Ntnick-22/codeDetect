@@ -326,6 +326,11 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
         const data = await response.json();
 
         if (response.ok) {
+            // Save file_hash to localStorage for persistence
+            if (data.file_hash) {
+                localStorage.setItem('last_analysis_hash', data.file_hash);
+                localStorage.setItem('last_analysis_time', new Date().toISOString());
+            }
             displayResults(data);
         } else {
             alert('Error: ' + data.error);
@@ -799,6 +804,68 @@ function refreshDeploymentInfo() {
 window.showSection = showSection;
 window.refreshDeploymentInfo = refreshDeploymentInfo;
 
+// Restore last analysis from localStorage
+async function restoreLastAnalysis() {
+    const lastHash = localStorage.getItem('last_analysis_hash');
+    const lastTime = localStorage.getItem('last_analysis_time');
+
+    if (!lastHash) return;
+
+    // Only restore if less than 7 days old (matching S3 file retention)
+    if (lastTime) {
+        const analysisTime = new Date(lastTime);
+        const now = new Date();
+        const daysDiff = (now - analysisTime) / (1000 * 60 * 60 * 24);
+
+        if (daysDiff > 7) {
+            // Analysis too old, clear it
+            localStorage.removeItem('last_analysis_hash');
+            localStorage.removeItem('last_analysis_time');
+            return;
+        }
+    }
+
+    try {
+        const response = await fetch(`/api/analysis/${lastHash}`);
+        if (response.ok) {
+            const data = await response.json();
+
+            // Reconstruct the expected data structure
+            if (data.analysis) {
+                const analysisData = {
+                    filename: data.analysis.filename || 'Previous Analysis',
+                    timestamp: data.timestamp,
+                    score: data.score,
+                    original_code: data.analysis.original_code || '',
+                    analysis: {
+                        quality_issues: data.analysis.quality_issues || [],
+                        security_issues: data.analysis.security_issues || [],
+                        complexity: data.analysis.complexity || {}
+                    },
+                    summary: data.analysis.summary || {
+                        total_issues: data.total_issues,
+                        security_issues: data.security_issues,
+                        high_complexity_functions: data.complexity_issues
+                    },
+                    file_hash: data.file_hash,
+                    s3_url: data.s3_url
+                };
+
+                displayResults(analysisData);
+
+                // Show a notification that results were restored
+                console.log('✅ Previous analysis restored from database');
+            }
+        } else {
+            // Analysis not found, clear localStorage
+            localStorage.removeItem('last_analysis_hash');
+            localStorage.removeItem('last_analysis_time');
+        }
+    } catch (error) {
+        console.error('Failed to restore last analysis:', error);
+    }
+}
+
 // Sidebar toggle for mobile
 document.addEventListener('DOMContentLoaded', () => {
     const sidebarToggle = document.getElementById('sidebarToggle');
@@ -815,6 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial data
     updateDashboardStats();
     loadVersionBadge();
+    restoreLastAnalysis();  // Restore previous analysis if exists
     // Note: Analytics loaded when analytics section is opened
 
     // Download button
