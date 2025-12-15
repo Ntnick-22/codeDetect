@@ -1,0 +1,167 @@
+<mxfile host="app.diagrams.net" modified="2025-12-14T00:00:00.000Z" agent="draw.io" version="22.1.11">
+  <diagram name="CI/CD Workflow" id="cicd-workflow">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="2. CI/CD DEPLOYMENT WORKFLOW" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="360" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub Push -->
+        <mxCell id="github-push" value="Developer Push&#xa;to main branch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="150" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub Actions -->
+        <mxCell id="github-actions" value="GitHub Actions&#xa;CI/CD Trigger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="260" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Push to Actions -->
+        <mxCell id="arrow1" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="github-push" target="github-actions">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="150" y="230" as="sourcePoint" />
+            <mxPoint x="200" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Tests -->
+        <mxCell id="tests" value="Run Tests&#xa;• Pytest&#xa;• Pylint (enforced)&#xa;• Bandit (enforced)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="280" y="150" width="140" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Build Docker -->
+        <mxCell id="build" value="Build Docker Image&#xa;docker build -t&#xa;nyeinthunaing/codedetect" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="280" y="270" width="140" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Actions to Tests -->
+        <mxCell id="arrow2" value="Step 1" style="endArrow=classic;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="github-actions" target="tests">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="275" as="sourcePoint" />
+            <mxPoint x="270" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrow: Tests to Build -->
+        <mxCell id="arrow3" value="If pass" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="tests" target="build">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="350" y="250" as="sourcePoint" />
+            <mxPoint x="400" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Push to Docker Hub -->
+        <mxCell id="docker-hub" value="Push to Docker Hub&#xa;docker push&#xa;(Image Registry)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="480" y="250" width="140" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Build to Docker Hub -->
+        <mxCell id="arrow4" value="Step 2" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;" edge="1" parent="1" source="build" target="docker-hub">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="310" as="sourcePoint" />
+            <mxPoint x="470" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Terraform Plan -->
+        <mxCell id="terraform-plan" value="Terraform Plan&#xa;• Validate changes&#xa;• Check target env" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="170" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Terraform Apply -->
+        <mxCell id="terraform-apply" value="Terraform Apply&#xa;• Deploy infrastructure&#xa;• Update EC2 instances" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="280" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Docker Hub to Terraform Plan -->
+        <mxCell id="arrow5" value="Step 3" style="endArrow=classic;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="docker-hub" target="terraform-plan">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="280" as="sourcePoint" />
+            <mxPoint x="670" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrow: Plan to Apply -->
+        <mxCell id="arrow6" value="Approved" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="terraform-plan" target="terraform-apply">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="750" y="260" as="sourcePoint" />
+            <mxPoint x="800" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- EC2 Pull -->
+        <mxCell id="ec2-pull" value="EC2 Instances&#xa;Pull Docker Image&#xa;from Docker Hub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="400" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Apply to EC2 Pull -->
+        <mxCell id="arrow7" value="Step 4" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="terraform-apply" target="ec2-pull">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="750" y="370" as="sourcePoint" />
+            <mxPoint x="800" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrow: Docker Hub to EC2 (pull) -->
+        <mxCell id="arrow8" value="docker pull" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;dashed=1;" edge="1" parent="1" source="docker-hub" target="ec2-pull">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="420" as="sourcePoint" />
+            <mxPoint x="600" y="370" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="550" y="435" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Run Container -->
+        <mxCell id="run-container" value="Run Docker Container&#xa;docker-compose up&#xa;(Blue or Green ASG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="520" width="140" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: EC2 Pull to Run -->
+        <mxCell id="arrow9" value="Step 5" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="ec2-pull" target="run-container">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="750" y="490" as="sourcePoint" />
+            <mxPoint x="800" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Blue-Green Switch -->
+        <mxCell id="blue-green" value="ALB Target Switch&#xa;Blue ⟷ Green" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="880" y="520" width="140" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Run to Blue-Green -->
+        <mxCell id="arrow10" value="Step 6" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="run-container" target="blue-green">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="820" y="560" as="sourcePoint" />
+            <mxPoint x="870" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Live Production -->
+        <mxCell id="production" value="✅ LIVE PRODUCTION&#xa;Zero Downtime" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="880" y="660" width="140" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Blue-Green to Production -->
+        <mxCell id="arrow11" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;strokeColor=#82b366;" edge="1" parent="1" source="blue-green" target="production">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="950" y="620" as="sourcePoint" />
+            <mxPoint x="1000" y="570" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Note: Build vs Pull -->
+        <mxCell id="note" value="IMPORTANT:&#xa;✅ GitHub Actions BUILDS image&#xa;✅ EC2 instances PULL pre-built image&#xa;❌ EC2 does NOT build (saves time)" style="text;html=1;strokeColor=#d79b00;fillColor=#ffe6cc;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="280" height="80" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

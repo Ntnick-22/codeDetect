@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(aws elbv2 describe-load-balancers:*)",
+      "Bash(aws elbv2 describe-target-groups:*)",
+      "Bash(aws elbv2 describe-target-health:*)"
+    ]
+  }
+}

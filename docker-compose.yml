@@ -1,60 +1,76 @@
 services:
   # =========================================================================
-  # POSTGRESQL DATABASE - MOVED TO AWS RDS
-  # =========================================================================
-  # We now use AWS RDS PostgreSQL instead of Docker PostgreSQL
-  # Benefits:
-  # - Managed backups, updates, monitoring by AWS
-  # - Both EC2 instances connect to same RDS (true high availability)
-  # - Free for 12 months (db.t3.micro)
-  # - No PostgreSQL container conflicts
-  # - Production-ready architecture
-  #
-  # Connection configured via DATABASE_URL environment variable below
-  # =========================================================================
-
-  # =========================================================================
   # CODEDETECT APPLICATION
   # =========================================================================
+  # Containerized Flask application for Python code analysis
+  # Connects to RDS PostgreSQL database (managed by AWS)
+  # Files stored in S3 for temporary 7 days (managed by AWS)
+  # =========================================================================
+
   codedetect:
     # Use Docker Hub image in production, or local build in development
-    # Set DOCKER_IMAGE env var to override (e.g., nyeinthunaing/codedetect:latest)
     image: ${DOCKER_IMAGE:-codedetect-app:latest}
     build:
       context: .
       dockerfile: Dockerfile
     container_name: codedetect-app
-    # No depends_on needed - RDS is always running
-    ports:
-      - "80:5000"  # ALB forwards to port 80, Flask app runs on 5000
-    env_file:
-      - .env  # Load deployment metadata from .env file (created by Terraform)
-    environment:
-      # Database connection string
-      # Format: postgresql://username:password@host:port/database
-      # RDS_ENDPOINT = RDS PostgreSQL hostname (fetched by EC2 user data script)
-      # Falls back to SQLite if RDS_ENDPOINT not set (for local development)
-      - DATABASE_URL=${RDS_ENDPOINT:+postgresql://${DB_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}/${DB_NAME}}${RDS_ENDPOINT:-sqlite:///codedetect.db}
-      - FLASK_ENV=${FLASK_ENV:-production}
-    volumes:
-      # ===================================================================
-      # FILE UPLOADS - Using EFS (shared across all instances)
-      # ===================================================================
-      # Maps EFS upload folder to container uploads directory
-      # All uploaded files are accessible from both instances
-      - /mnt/efs/uploads:/app/uploads
 
-      # ===================================================================
-      # DATABASE - Using EFS (shared across all instances)
-      # ===================================================================
-      # Maps EFS database folder to container instance directory
-      # Both instances read/write to same SQLite database file
-      - /mnt/efs/database:/app/instance
+    ports:
+      - "80:5000"  # ALB forwards to port 80, Flask runs on 5000
+
+    # Load environment variables from .env file
+    # Created by Terraform during EC2 user data script execution
+    env_file:
+      - .env
+
+    environment:
+      # Database connection (RDS PostgreSQL)
+      # DATABASE_URL is set in .env file by Terraform
+      # Format: postgresql://username:password@rds-endpoint:5432/database
+      - DATABASE_URL=${DATABASE_URL}
+
+      # Flask environment
+      - FLASK_ENV=${FLASK_ENV:-production}
+
+      # S3 configuration for file uploads
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - AWS_REGION=${AWS_REGION:-eu-west-1}
+
+      # SNS configuration for feedback emails
+      - SNS_TOPIC_ARN=${SNS_TOPIC_ARN}
+
+    # NO VOLUMES NEEDED
+    # - Database: Using RDS PostgreSQL (network connection)
+    # - File uploads: Using S3 (boto3 SDK)
+    # - No EFS required!
+
     restart: unless-stopped
-    # Health check for ALB
+
+    # Health check for ALB target group
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# ARCHITECTURE:
+# - Database: RDS PostgreSQL (managed, Multi-AZ, automatic backups)
+# - File Storage: S3 (cheap, durable, lifecycle policies)
+# - No EFS needed (deprecated)
+#
+# ENVIRONMENT VARIABLES:
+# All sensitive values (DB password, SNS ARN) are fetched from AWS Parameter
+# Store by the EC2 user data script and written to .env file
+#
+# LOCAL DEVELOPMENT:
+# Create a .env file with:
+#   DATABASE_URL=sqlite:///codedetect.db
+#   S3_BUCKET_NAME=your-local-bucket
+#   FLASK_ENV=development
+#
+# ============================================================================

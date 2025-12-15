@@ -14,12 +14,12 @@ allowed_ssh_ip = "0.0.0.0/0" # Allow from anywhere since IP changes dynamically
 # Storage (must be globally unique!)
 s3_bucket_name = "codedetect-nick-uploads-12345"
 
-# Database (not used since use_rds = false)
-db_password = "NotUsedButRequired123!"
+# Database password (RDS enabled - fetched from Parameter Store in production)
+db_password = "ChangeMe123!" # Placeholder - actual password in Parameter Store
 
 # Cost Optimization
 instance_type     = "t3.micro"
-use_rds           = false
+use_rds           = true
 enable_https      = true
 enable_monitoring = true
 

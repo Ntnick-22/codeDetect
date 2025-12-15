@@ -118,7 +118,7 @@ resource "aws_vpc_security_group_egress_rule" "rds_egress" {
 # ----------------------------------------------------------------------------
 # The actual database server
 
-resource "aws_db_instance" "postgres" {
+resource "aws_db_instance" "main" {
   count = var.use_rds ? 1 : 0 # Only create if use_rds = true
 
   # ============================================================
@@ -235,17 +235,17 @@ resource "aws_iam_role_policy_attachment" "rds_monitoring" {
 
 output "rds_endpoint" {
   description = "RDS PostgreSQL endpoint for database connection"
-  value       = var.use_rds ? aws_db_instance.postgres[0].endpoint : "RDS not enabled (using SQLite)"
+  value       = var.use_rds ? aws_db_instance.main[0].endpoint : "RDS not enabled (using SQLite)"
 }
 
 output "rds_address" {
   description = "RDS PostgreSQL hostname (without port)"
-  value       = var.use_rds ? aws_db_instance.postgres[0].address : "RDS not enabled"
+  value       = var.use_rds ? aws_db_instance.main[0].address : "RDS not enabled"
 }
 
 output "rds_port" {
   description = "RDS PostgreSQL port"
-  value       = var.use_rds ? aws_db_instance.postgres[0].port : 5432
+  value       = var.use_rds ? aws_db_instance.main[0].port : 5432
 }
 
 output "database_name" {

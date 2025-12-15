@@ -1,0 +1,181 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="Monitoring &amp; Alerting" id="monitoring">
+    <mxGraphModel dx="1426" dy="841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="4. MONITORING &amp; ALERTING" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="400" y="40" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle1" value="A. CloudWatch Infrastructure Monitoring" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="80" y="100" width="360" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ec2" value="EC2 Instances&#xa;(Blue &amp; Green ASG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="80" y="150" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" value="Application&#xa;Load Balancer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="80" y="240" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="metrics" value="CloudWatch Metrics&#xa;• CPU Utilization&#xa;• Memory Usage&#xa;• Disk I/O&#xa;• Network Traffic&#xa;• HTTP Response Time&#xa;• Request Count" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" parent="1" vertex="1">
+          <mxGeometry x="310" y="150" width="180" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" value="Send metrics" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="ec2" target="metrics" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="180" as="sourcePoint" />
+            <mxPoint x="270" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow2" value="Send metrics" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="alb" target="metrics" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="270" as="sourcePoint" />
+            <mxPoint x="270" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alarms" value="CloudWatch Alarms&lt;br&gt;• High CPU (&amp;gt;40%)&amp;nbsp;&lt;br&gt;• Unhealthy Targets&lt;br&gt;• High Error Rate (5XX)&lt;br&gt;• Low Memory&lt;br&gt;• Response Time &amp;gt;3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;" parent="1" vertex="1">
+          <mxGeometry x="560" y="150" width="180" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" value="Evaluate" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="metrics" target="alarms" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="225" as="sourcePoint" />
+            <mxPoint x="510" y="175" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sns-cloudwatch" value="SNS Topic&lt;br&gt;codedetect-prod-alerts&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="800" y="165" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" value="Trigger" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="alarms" target="sns-cloudwatch" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="700" y="225" as="sourcePoint" />
+            <mxPoint x="750" y="175" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="email-cloudwatch" value="✅ Email + SMS&lt;br&gt;mygmail@gmail.com" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1029" y="175" width="140" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="sns-cloudwatch" target="email-cloudwatch" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="940" y="225" as="sourcePoint" />
+            <mxPoint x="990" y="175" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="divider" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#666666;dashed=1;dashPattern=8 8;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="350" as="sourcePoint" />
+            <mxPoint x="1140" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="subtitle2" value="B. User Feedback System (Lambda + SES)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="80" y="370" width="360" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard" value="Dashboard&#xa;(User Interface)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="30" y="420" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback-form" value="Feedback Form&#xa;• Report Bug&#xa;• Feature Request&#xa;• General Feedback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" parent="1" vertex="1">
+          <mxGeometry x="260" y="410" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" value="User clicks" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="dashboard" target="feedback-form" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="450" as="sourcePoint" />
+            <mxPoint x="270" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="api-report" value="POST /api/report&#xa;(Flask Backend)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="500" y="420" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow7" value="Submit" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="feedback-form" target="api-report" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="440" y="450" as="sourcePoint" />
+            <mxPoint x="490" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow8" value="Publish JSON" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="api-report" target="sns-feedback" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="640" y="450" as="sourcePoint" />
+            <mxPoint x="690" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lambda" value="Lambda Function&#xa;feedback-handler&#xa;&#xa;• Parse JSON&#xa;• Format HTML email&#xa;• Set Reply-To header" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;" parent="1" vertex="1">
+          <mxGeometry x="710" y="350" width="140" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-lambda" value="Trigger" style="endArrow=classic;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="sns-feedback" target="lambda" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="720" y="390" as="sourcePoint" />
+            <mxPoint x="770" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ses" value="Amazon SES&#xa;(Email Service)&#xa;&#xa;✅ Better deliverability&#xa;✅ Reply-To support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;" parent="1" vertex="1">
+          <mxGeometry x="990" y="370" width="140" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-ses" value="Send email" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="lambda" target="ses" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="790" y="390" as="sourcePoint" />
+            <mxPoint x="840" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="email-feedback" value="✅ Gmail Inbox&lt;br&gt;mygmail@gmail.com&lt;br&gt;&lt;br&gt;From: noreply@&lt;br&gt;Reply-To: user@email.com" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1230" y="370" width="150" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow9" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="ses" target="email-feedback" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="970" y="410" as="sourcePoint" />
+            <mxPoint x="1020" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="divider2" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#666666;dashed=1;dashPattern=8 8;" parent="1" edge="1" source="sns-feedback">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="540" as="sourcePoint" />
+            <mxPoint x="1140" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="subtitle3" value="C. Auto-Scaling Triggers" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="80" y="560" width="360" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="metrics2" value="CloudWatch Metrics&#xa;CPU Utilization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="80" y="610" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="scale-up" value="Scale UP Trigger&lt;br&gt;CPU &amp;gt; 40%&lt;br&gt;for 5 minutes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="440" y="560" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="scale-down" value="Scale DOWN Trigger&#xa;CPU &lt; 30%&#xa;for 5 minutes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="445" y="660" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow10" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="metrics2" target="scale-up" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="625" as="sourcePoint" />
+            <mxPoint x="270" y="575" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow11" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="metrics2" target="scale-down" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="655" as="sourcePoint" />
+            <mxPoint x="270" y="605" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="asg" value="Auto Scaling Group&#xa;Add/Remove EC2 Instances&#xa;&#xa;Min: 2, Max: 4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="970" y="610" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow12" value="Add instance" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="scale-up" target="asg" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="605" as="sourcePoint" />
+            <mxPoint x="470" y="555" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow13" value="Remove instance" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="scale-down" target="asg" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="695" as="sourcePoint" />
+            <mxPoint x="470" y="645" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4kPu-L8Y-9XYMV_JDo66-2" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#666666;dashed=1;dashPattern=8 8;" edge="1" parent="1" target="sns-feedback">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="540" as="sourcePoint" />
+            <mxPoint x="1140" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sns-feedback" value="SNS Topic&#xa;user-feedback" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="710" y="490" width="140" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

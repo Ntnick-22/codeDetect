@@ -5,25 +5,6 @@
 # Run 'terraform output' to see these values anytime
 # ============================================================================
 
-# ----------------------------------------------------------------------------
-# EC2 INSTANCE INFORMATION - Now using Auto Scaling Group
-# ----------------------------------------------------------------------------
-
-# COMMENTED OUT: Now using Auto Scaling Group instead of single instance
-# output "ec2_instance_id" {
-#   description = "ID of the EC2 instance"
-#   value       = aws_instance.main.id
-# }
-
-# output "ec2_public_ip" {
-#   description = "Removed - Using Auto Scaling Group with Load Balancer"
-#   value       = "See load_balancer_dns output"
-# }
-
-# output "ec2_instance_type" {
-#   description = "Type of EC2 instance"
-#   value       = aws_instance.main.instance_type
-# }
 
 # ----------------------------------------------------------------------------
 # NETWORK INFORMATION
@@ -154,7 +135,7 @@ output "infrastructure_summary" {
 # OUTPUT EXPLANATION
 # ============================================================================
 
-# WHAT ARE OUTPUTS?
+# WHAT ARE TERRAFORM OUTPUTS?
 # - Values displayed after 'terraform apply' completes
 # - Can be viewed anytime with 'terraform output'
 # - Useful for getting important information without digging through resources
@@ -214,10 +195,10 @@ output "cloudwatch_alarms" {
   description = "List of CloudWatch alarms created"
   value = {
     blue_cpu_high_alarm   = aws_cloudwatch_metric_alarm.blue_cpu_high.alarm_name
+    blue_cpu_low_alarm    = aws_cloudwatch_metric_alarm.blue_cpu_low.alarm_name
     green_cpu_high_alarm  = aws_cloudwatch_metric_alarm.green_cpu_high.alarm_name
-    instance_down_alarm   = aws_cloudwatch_metric_alarm.instance_status_check.alarm_name
-    unhealthy_targets_alarm = aws_cloudwatch_metric_alarm.unhealthy_targets.alarm_name
-    high_network_alarm    = aws_cloudwatch_metric_alarm.high_network_out.alarm_name
+    green_cpu_low_alarm   = aws_cloudwatch_metric_alarm.green_cpu_low.alarm_name
+    billing_alarm_30      = aws_cloudwatch_metric_alarm.billing_alarm_30.alarm_name
   }
 }
 
@@ -239,7 +220,7 @@ output "cloudwatch_dashboard_name" {
 output "monitoring_setup_instructions" {
   description = "Instructions to complete monitoring setup"
   value       = <<-EOT
-    ⚠️  IMPORTANT: Complete SNS Email Subscription
+      IMPORTANT: Complete SNS Email Subscription
 
     After running 'terraform apply':
 
@@ -265,39 +246,14 @@ output "monitoring_setup_instructions" {
     Monitoring Dashboard: ${aws_sns_topic.alerts.arn}
 
     Active Alarms:
-    ✓ High CPU (>80% for 5 min)
-    ✓ Instance Down (status check fails)
-    ✓ High Network Traffic (>100MB/5min)
+     High CPU (>40% for 5 min)
+   
+     Monthly Billing (> $30)
+    
   EOT
 }
 
-# ----------------------------------------------------------------------------
-# COST ESTIMATION OUTPUT
-# ----------------------------------------------------------------------------
 
-output "monthly_cost_estimate" {
-  description = "Estimated monthly AWS costs"
-  value       = <<-EOT
-    Estimated Monthly Costs (EU-WEST-1):
-    
-    With Free Tier (First 12 Months):
-    - EC2 t3.micro:        $0.00  (750 hours/month free)
-    - S3 Storage (5GB):    $0.00  (free tier)
-    - Route 53 Hosted Zone: $0.50  (not covered by free tier)
-    - Data Transfer (1GB): $0.00  (free tier)
-    TOTAL: ~$1-2/month
-    
-    After Free Tier:
-    - EC2 t3.micro:        ~$7.50/month
-    - S3 Storage:          ~$0.50/month
-    - Route 53:            $0.50/month
-    - Data Transfer:       ~$1/month
-    TOTAL: ~$10/month
-    
-    Note: Actual costs may vary based on usage.
-    Monitor costs in AWS Cost Explorer!
-  EOT
-}
 
 # ----------------------------------------------------------------------------
 # NEXT STEPS OUTPUT
@@ -306,7 +262,7 @@ output "monthly_cost_estimate" {
 output "next_steps" {
   description = "What to do after Terraform completes"
   value       = <<-EOT
-    ✅ Infrastructure Created Successfully!
+     Infrastructure Created Successfully!
     
     Next Steps:
     
@@ -326,9 +282,9 @@ output "next_steps" {
        HTTPS: https://${var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name}
        HTTP redirects automatically to HTTPS
 
-    5. MONITOR EFS DATABASE
-       Database on shared storage: /mnt/efs/database/codedetect.db
-       Both instances use same database
+    5. MONITOR RDS DATABASE
+       Database: RDS PostgreSQL (managed service)
+       Connection: ${var.use_rds ? aws_db_instance.main[0].endpoint : "SQLite (not using RDS)"}
 
     6. SSH FOR DEBUGGING (if needed)
        Get instance IPs: aws ec2 describe-instances --filters 'Name=tag:aws:autoscaling:groupName,Values=${local.active_asg_name}' --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
@@ -337,19 +293,9 @@ output "next_steps" {
     7. TEST APPLICATION
        URL: ${var.subdomain != "" ? "http://${var.subdomain}.${var.domain_name}:5000" : "http://${var.domain_name}:5000"}
     
-    5. CONFIGURE FIREWALL (if needed)
-       - Update security group rules
-       - Allow port 80 for standard HTTP
+  
     
-    6. MONITOR COSTS
-       - AWS Console → Billing Dashboard
-       - Set up billing alerts
     
-    7. SETUP BACKUPS
-       - Enable automated snapshots
-       - Test restore procedures
-    
-    Happy Deploying! 🚀
   EOT
 }
 

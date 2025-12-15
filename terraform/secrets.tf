@@ -115,7 +115,7 @@ resource "aws_ssm_parameter" "database_url" {
   type        = "SecureString"
 
   # Use RDS PostgreSQL if enabled, otherwise fallback to SQLite
-  value = var.use_rds ? "postgresql://${var.db_username}:${nonsensitive(var.db_password)}@${aws_db_instance.postgres[0].address}:${aws_db_instance.postgres[0].port}/${var.db_name}" : "sqlite:////app/instance/codedetect.db"
+  value = var.use_rds ? "postgresql://${var.db_username}:${nonsensitive(var.db_password)}@${aws_db_instance.main[0].address}:${aws_db_instance.main[0].port}/${var.db_name}" : "sqlite:////app/instance/codedetect.db"
 
   tags = merge(
     local.common_tags,

@@ -1,0 +1,134 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="CI/CD Workflow" id="cicd-workflow">
+    <mxGraphModel dx="1426" dy="841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="2. CI/CD DEPLOYMENT WORKFLOW" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="460" y="40" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="github-push" value="Developer Push&#xa;to main branch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="30" y="40" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="github-actions" value="GitHub Actions&#xa;CI/CD Trigger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="30" y="250" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="github-push" target="github-actions" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="150" y="230" as="sourcePoint" />
+            <mxPoint x="200" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tests" value="Run Tests&lt;br&gt;• Pytest&lt;br&gt;• Pylint&amp;nbsp;&lt;br&gt;• Bandit&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="270" y="50" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="build" value="Build Docker Image&#xa;docker build -t&#xa;nyeinthunaing/codedetect" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="370" y="280" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" value="Step 1" style="endArrow=classic;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="github-actions" target="tests" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="275" as="sourcePoint" />
+            <mxPoint x="270" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow3" value="If pass" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="tests" target="build" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="350" y="250" as="sourcePoint" />
+            <mxPoint x="400" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="docker-hub" value="Push to Docker Hub&#xa;docker push&#xa;(Image Registry)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="500" y="110" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" value="Step 2" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.214;entryY=1.017;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;" parent="1" source="build" target="docker-hub" edge="1">
+          <mxGeometry x="-0.0022" width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="310" as="sourcePoint" />
+            <mxPoint x="470" y="260" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="terraform-plan" value="Terraform Plan&#xa;• Validate changes&#xa;• Check target env" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="900" y="110" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="terraform-apply" value="Terraform Apply&#xa;• Deploy infrastructure&#xa;• Update EC2 instances" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="900" y="260" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" value="Step 3" style="endArrow=classic;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="docker-hub" target="terraform-plan" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="280" as="sourcePoint" />
+            <mxPoint x="670" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow6" value="Approved" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="terraform-plan" target="terraform-apply" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="750" y="260" as="sourcePoint" />
+            <mxPoint x="800" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ec2-pull" value="EC2 Instances&#xa;Pull Docker Image&#xa;from Docker Hub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="720" y="410" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow7" value="Step 4" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=2;" parent="1" source="terraform-apply" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="750" y="370" as="sourcePoint" />
+            <mxPoint x="850" y="440" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="970" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow8" value="docker pull" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;dashed=1;" parent="1" source="docker-hub" target="ec2-pull" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="420" as="sourcePoint" />
+            <mxPoint x="600" y="370" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="570" y="445" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="run-container" value="Run Docker Container&#xa;docker-compose up&#xa;(Blue or Green ASG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="720" y="540" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow9" value="Step 5" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="ec2-pull" target="run-container" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="750" y="490" as="sourcePoint" />
+            <mxPoint x="800" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="blue-green" value="ALB Target Switch&#xa;Blue ⟷ Green" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="430" y="550" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow10" value="Step 6" style="endArrow=classic;html=1;entryX=1.029;entryY=0.413;entryDx=0;entryDy=0;strokeWidth=2;entryPerimeter=0;" parent="1" target="blue-green" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="720" y="580" as="sourcePoint" />
+            <mxPoint x="870" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="production" value="&amp;nbsp;LIVE PRODUCTION&lt;br&gt;Zero Downtime" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="30" y="550" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="B8sSbl-clGi6RjmkGmw0-3" value="Workflow failed and exit&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="180" y="350" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="B8sSbl-clGi6RjmkGmw0-13" value="" style="endArrow=classic;html=1;rounded=0;" parent="1" target="B8sSbl-clGi6RjmkGmw0-3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="130" as="sourcePoint" />
+            <mxPoint x="460" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="B8sSbl-clGi6RjmkGmw0-14" value="if fail" style="edgeLabel;resizable=0;html=1;;align=center;verticalAlign=middle;" parent="B8sSbl-clGi6RjmkGmw0-13" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="B8sSbl-clGi6RjmkGmw0-25" value="Step 7" style="endArrow=classic;html=1;rounded=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="blue-green" target="production" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="260" y="539" as="sourcePoint" />
+            <mxPoint x="420" y="539" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="260" y="590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,31 +1,29 @@
-# Use existing key pair (already created in AWS)
+# ============================================================================
+# EC2 CONFIGURATION
+# ============================================================================
+# Defines IAM roles, instance profiles, and user data script for EC2 instances
+# Instances are launched via Auto Scaling Group (see loadbalancer.tf)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# SSH KEY PAIR
+# ----------------------------------------------------------------------------
+# References existing SSH key pair in AWS for instance access
 data "aws_key_pair" "main" {
   key_name = var.key_pair_name
-
-  # This references the existing key pair in AWS
-  # No need to upload public key file
 }
 
 # ----------------------------------------------------------------------------
-# ELASTIC IP - REMOVED
+# USER DATA SCRIPT
 # ----------------------------------------------------------------------------
-# EIP was used for single EC2 instance setup
-# Now using Application Load Balancer (ALB) which has its own DNS
-# ALB DNS: codedetect-prod-alb-*.eu-west-1.elb.amazonaws.com
-# Domain points to ALB via Route53 ALIAS record (see route53.tf)
-# No static IP needed for HA setup with load balancer
-
-# ----------------------------------------------------------------------------
-# EC2 USER DATA SCRIPT
-# ----------------------------------------------------------------------------
-# This script runs automatically when EC2 instance first starts
-# It installs Docker and prepares the server
+# Runs automatically when EC2 instance first boots
+# Installs Docker, clones repo, pulls Docker image, and starts application
 
 locals {
   user_data = <<-EOF
     #!/bin/bash
     # CodeDetect EC2 Setup Script
-    # This runs once when instance first boots
+    # Runs once on first boot to configure the instance
 
     # Update system packages
     yum update -y
@@ -37,64 +35,15 @@ locals {
     systemctl start docker
     systemctl enable docker
 
-    # Add ec2-user to docker group (so we can run docker without sudo)
+    # Add ec2-user to docker group (run docker without sudo)
     usermod -a -G docker ec2-user
 
     # Install Docker Compose
     curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
 
-    # Install Git (to clone your repo)
+    # Install Git
     yum install -y git
-
-    # ========================================================================
-    # EFS SETUP - Mount shared filesystem for database
-    # ========================================================================
-    # Install EFS utilities (needed to mount EFS)
-    yum install -y amazon-efs-utils
-
-    # Create mount point directory
-    mkdir -p /mnt/efs
-
-    # Mount EFS using the EFS ID
-    # This mounts the shared drive where database will be stored
-    echo "${aws_efs_file_system.main.id}:/ /mnt/efs efs _netdev,noresvport,tls 0 0" >> /etc/fstab
-
-    # Mount all filesystems from fstab
-    mount -a -t efs
-
-    # Wait for EFS to be ready
-    sleep 5
-
-    # Create PostgreSQL directory on EFS (shared between all instances)
-    mkdir -p /mnt/efs/postgres
-
-    # Create uploads directory on EFS (shared file uploads)
-    mkdir -p /mnt/efs/uploads
-
-    # Set ownership to ec2-user so Docker can write to it
-    chown -R ec2-user:ec2-user /mnt/efs/postgres
-    chown -R ec2-user:ec2-user /mnt/efs/uploads
-    chmod -R 755 /mnt/efs/postgres
-    chmod -R 755 /mnt/efs/uploads
-
-    echo "EFS mounted successfully at /mnt/efs" >> /var/log/codedetect-deploy.log
-    # ========================================================================
-
-    # ========================================================================
-    # OLD NGINX INSTALLATION REMOVED
-    # ========================================================================
-    # We now use Nginx as a Docker container (in docker-compose.yml)
-    # This provides:
-    # - Version control (Nginx config in Git)
-    # - Easier updates (just restart container)
-    # - Consistent environments (dev/prod identical)
-    # - Industry standard (containerized reverse proxy)
-    #
-    # The Nginx container (nginx:alpine) routes traffic:
-    # - /grafana/* → Grafana container (port 3000)
-    # - /*         → CodeDetect app (port 5000)
-    # ========================================================================
 
     # Create app directory
     mkdir -p /home/ec2-user/app
@@ -103,87 +52,43 @@ locals {
     # Log completion
     echo "CodeDetect setup complete!" > /home/ec2-user/setup-complete.txt
 
-    # Auto-deploy application
+    # ========================================================================
+    # AUTO-DEPLOY APPLICATION
+    # ========================================================================
     echo "=== Starting automatic deployment ===" >> /var/log/codedetect-deploy.log
     cd /home/ec2-user/app
 
-    # Clone repository to get docker-compose.yml and configuration files
-    echo "Cloning repository for docker-compose.yml" >> /var/log/codedetect-deploy.log
+    # Clone repository to get docker-compose.yml and configuration
+    echo "Cloning repository..." >> /var/log/codedetect-deploy.log
     su - ec2-user -c "cd /home/ec2-user/app && git clone https://github.com/Ntnick-22/codeDetect.git . 2>&1" >> /var/log/codedetect-deploy.log
 
     if [ ! -f /home/ec2-user/app/docker-compose.yml ]; then
-      echo "ERROR: docker-compose.yml not found after git clone" >> /var/log/codedetect-deploy.log
+      echo "ERROR: docker-compose.yml not found" >> /var/log/codedetect-deploy.log
       exit 1
     fi
     echo "Repository cloned successfully" >> /var/log/codedetect-deploy.log
 
-    # Pull pre-built Docker image from Docker Hub (faster than building)
-    echo "Pulling pre-built Docker image: ${var.docker_image_repo}:${var.docker_tag}" >> /var/log/codedetect-deploy.log
+    # Pull pre-built Docker image from Docker Hub
+    echo "Pulling Docker image: ${var.docker_image_repo}:${var.docker_tag}" >> /var/log/codedetect-deploy.log
     su - ec2-user -c "docker pull ${var.docker_image_repo}:${var.docker_tag} 2>&1" >> /var/log/codedetect-deploy.log
 
-    # Tag the image as codedetect-app:latest for docker-compose compatibility
+    # Tag image for docker-compose compatibility
     echo "Tagging image as codedetect-app:latest" >> /var/log/codedetect-deploy.log
     su - ec2-user -c "docker tag ${var.docker_image_repo}:${var.docker_tag} codedetect-app:latest 2>&1" >> /var/log/codedetect-deploy.log
 
     # Verify image is available
-    echo "Verifying Docker image availability" >> /var/log/codedetect-deploy.log
     su - ec2-user -c "docker images | grep codedetect-app" >> /var/log/codedetect-deploy.log
 
     # Wait for Docker to be fully ready
     sleep 5
 
     # ========================================================================
-    # AUTOMATIC DATA MIGRATION TO EFS (First Time Setup Only)
-    # ========================================================================
-    echo "=== Checking for existing data to migrate to EFS ===" >> /var/log/codedetect-deploy.log
-
-    # Check if database already exists on EFS
-    if [ ! -f /mnt/efs/database/codedetect.db ]; then
-      echo "First time EFS setup detected - checking for existing data" >> /var/log/codedetect-deploy.log
-
-      # Start temporary container with old volume to extract data
-      # This runs BEFORE the new docker-compose to capture old data
-      if docker volume ls | grep -q codedetect-data; then
-        echo "Found existing codedetect-data volume - migrating to EFS" >> /var/log/codedetect-deploy.log
-
-        # Use Alpine container to copy from old volume to EFS
-        docker run --rm \
-          -v codedetect-data:/old-data:ro \
-          -v /mnt/efs/database:/new-data \
-          alpine sh -c 'if [ -f /old-data/codedetect.db ]; then cp /old-data/codedetect.db /new-data/; echo "Database copied"; else echo "No database file found"; fi' \
-          >> /var/log/codedetect-deploy.log 2>&1
-
-        echo "=== Database migration completed ===" >> /var/log/codedetect-deploy.log
-      else
-        echo "No existing data volume found - starting with fresh database" >> /var/log/codedetect-deploy.log
-      fi
-
-      # Migrate uploads if they exist
-      if docker volume ls | grep -q codedetect-uploads; then
-        echo "Found existing codedetect-uploads volume - migrating to EFS" >> /var/log/codedetect-deploy.log
-
-        docker run --rm \
-          -v codedetect-uploads:/old-uploads:ro \
-          -v /mnt/efs/uploads:/new-uploads \
-          alpine sh -c 'cp -r /old-uploads/* /new-uploads/ 2>/dev/null || echo "No uploads to migrate"' \
-          >> /var/log/codedetect-deploy.log 2>&1
-
-        echo "=== Uploads migration completed ===" >> /var/log/codedetect-deploy.log
-      fi
-    else
-      echo "Database already exists on EFS - skipping migration" >> /var/log/codedetect-deploy.log
-    fi
-    # ========================================================================
-
-    # ========================================================================
-    # SET DEPLOYMENT INFO ENVIRONMENT VARIABLES
-    # ========================================================================
-    # Fetch secrets from AWS Parameter Store
+    # FETCH SECRETS FROM PARAMETER STORE
     # ========================================================================
     echo "Fetching secrets from Parameter Store..." >> /var/log/codedetect-deploy.log
 
-    # Fetch database password
-    DB_PASSWORD=$(aws ssm get-paramweter \
+    # Fetch RDS database password
+    DB_PASSWORD=$(aws ssm get-parameter \
       --name "codedetect-prod-db-password" \
       --with-decryption \
       --region ${var.aws_region} \
@@ -192,14 +97,22 @@ locals {
 
     if [ -z "$DB_PASSWORD" ]; then
       echo "ERROR: Failed to fetch DB_PASSWORD from Parameter Store" >> /var/log/codedetect-deploy.log
-      DB_PASSWORD="codedetect_secure_pass_2025"  # Fallback (for dev only)
+      DB_PASSWORD="fallback_password"  # Fallback (should not be used in prod)
     else
       echo "Successfully fetched DB_PASSWORD" >> /var/log/codedetect-deploy.log
     fi
 
+    # Fetch SNS topic ARN for feedback system
+    SNS_TOPIC_ARN=$(aws ssm get-parameter \
+      --name "codedetect-prod-sns-topic-arn" \
+      --region ${var.aws_region} \
+      --query 'Parameter.Value' \
+      --output text 2>/dev/null || echo "")
+
     # ========================================================================
-    # Create environment file with deployment metadata
-    # These will be injected into Docker container for the /api/info endpoint
+    # CREATE ENVIRONMENT FILE
+    # ========================================================================
+    # These environment variables are injected into the Docker container
     cat > /home/ec2-user/app/.env <<ENVFILE
 # Deployment Information
 DOCKER_TAG=${var.docker_tag}
@@ -213,112 +126,34 @@ INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
 FLASK_ENV=prod
 S3_BUCKET_NAME=${var.s3_bucket_name}
 AWS_REGION=${var.aws_region}
+SNS_TOPIC_ARN=$SNS_TOPIC_ARN
 
-# Database Configuration
-# PostgreSQL running in Docker (not SQLite anymore!)
-# The DATABASE_URL will be constructed by docker-compose.yml
-DB_PASSWORD=$DB_PASSWORD
+# Database Configuration (RDS PostgreSQL)
+DATABASE_URL=postgresql://codedetect_user:$DB_PASSWORD@${aws_db_instance.main[0].address}:5432/codedetect_db
 ENVFILE
 
     chown ec2-user:ec2-user /home/ec2-user/app/.env
-    echo "Environment variables configured (including DB_PASSWORD)" >> /var/log/codedetect-deploy.log
-    # ========================================================================
+    echo "Environment file created" >> /var/log/codedetect-deploy.log
 
-    # ========================================================================
-    # POSTGRESQL LOCK - Only one instance should run PostgreSQL
-    # ========================================================================
-    # PostgreSQL data directory can only be used by ONE process at a time
-    # Use a lock file on EFS to coordinate which instance runs the database
-    LOCK_FILE="/mnt/efs/postgres.lock"
+   
 
-    if [ ! -f "$LOCK_FILE" ]; then
-      # No lock file exists, this instance will run PostgreSQL
-      echo "$(hostname):$(date)" > "$LOCK_FILE"
-      echo "This instance will run PostgreSQL database" >> /var/log/codedetect-deploy.log
-      COMPOSE_PROFILES="with-db"
-    else
-      # Lock file exists, another instance is running PostgreSQL
-      echo "PostgreSQL already running on: $(cat $LOCK_FILE)" >> /var/log/codedetect-deploy.log
-      echo "This instance will connect to existing database" >> /var/log/codedetect-deploy.log
-      COMPOSE_PROFILES="no-db"
-    fi
-    # ========================================================================
-
-    # Now start application with EFS storage
-    su - ec2-user -c "cd /home/ec2-user/app && COMPOSE_PROFILES=$COMPOSE_PROFILES docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
+    su - ec2-user -c "cd /home/ec2-user/app && docker-compose up -d 2>&1" >> /var/log/codedetect-deploy.log
 
     echo "=== Deployment complete at $(date) ===" >> /var/log/codedetect-deploy.log
-    echo "Application auto-deployed!" > /home/ec2-user/deployment-complete.txt
+    echo "Application deployed successfully!" > /home/ec2-user/deployment-complete.txt
   EOF
 }
 
 # ----------------------------------------------------------------------------
-# EC2 INSTANCE - REPLACED BY AUTO SCALING GROUP
+# IAM ROLE FOR EC2 INSTANCES
 # ----------------------------------------------------------------------------
-# COMMENTED OUT: Now using Auto Scaling Group with Launch Template instead
-# This provides high availability with automatic failover
-# See loadbalancer.tf for the new setup
+#
 
-# resource "aws_instance" "main" {
-#   # AMI (machine image) - using Amazon Linux 2
-#   ami = data.aws_ami.amazon_linux_2.id
-#
-#   # Instance type (size)
-#   instance_type = var.instance_type # t3.micro from variables
-#
-#   # SSH key for access
-#   key_name = aws_key_pair.main.key_name
-#
-#   # Which subnet to launch in (public subnet 1)
-#   subnet_id = aws_subnet.public_1.id
-#
-#   # Security group (firewall rules)
-#   vpc_security_group_ids = [aws_security_group.ec2.id]
-#
-#   # User data script (runs on first boot)
-#   user_data = local.user_data
-#
-#   # Root volume (main hard drive)
-#   root_block_device {
-#     volume_type = "gp3" # General Purpose SSD v3 (faster, cheaper)
-#     volume_size = 20    # 20 GB (enough for Docker + app)
-#     encrypted   = true  # Encrypt the drive for security
-#
-#     tags = {
-#       Name = "${local.name_prefix}-root-volume"
-#     }
-#   }
-#
-#   # Enable detailed monitoring (optional, costs extra)
-#   monitoring = var.enable_monitoring
-#
-#   # IAM role for accessing S3 (we'll create this next)
-#   iam_instance_profile = aws_iam_instance_profile.ec2.name
-#
-#   tags = merge(
-#     local.common_tags,
-#     {
-#       Name = "${local.name_prefix}-ec2"
-#     }
-#   )
-#
-#   # Ensure VPC and security group exist first
-#   depends_on = [
-#     aws_security_group.ec2,
-#     aws_internet_gateway.main
-#   ]
-# }
 
-# ----------------------------------------------------------------------------
-# IAM ROLE FOR EC2
-# ----------------------------------------------------------------------------
-# Allows EC2 instance to access AWS services (like S3) without hardcoded keys
-
-# IAM Role
 resource "aws_iam_role" "ec2" {
   name = "${local.name_prefix}-ec2-role"
 
-  # Trust policy: allows EC2 service to assume this role
+  # Trust policy: Allows EC2 service to assume this role
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -335,22 +170,25 @@ resource "aws_iam_role" "ec2" {
   tags = local.common_tags
 }
 
-# Attach policy allowing S3 access
+# ----------------------------------------------------------------------------
+# IAM POLICY - S3 ACCESS
+# ----------------------------------------------------------------------------
+# Allows EC2 instances to read/write uploaded Python files to S3
+
 resource "aws_iam_role_policy" "ec2_s3_access" {
   name = "${local.name_prefix}-ec2-s3-policy"
   role = aws_iam_role.ec2.id
 
-  # Policy: Allow read/write to our S3 bucket
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
         Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket"
+          "s3:GetObject",      # Download files
+          "s3:PutObject",      # Upload files
+          "s3:DeleteObject",   # Delete files
+          "s3:ListBucket"      # List bucket contents
         ]
         Resource = [
           aws_s3_bucket.uploads.arn,
@@ -362,36 +200,26 @@ resource "aws_iam_role_policy" "ec2_s3_access" {
 }
 
 # ----------------------------------------------------------------------------
-# IAM POLICY - SSM Parameter Store Access
+# IAM POLICY - PARAMETER STORE ACCESS
 # ----------------------------------------------------------------------------
-
-# WHAT: IAM policy allowing EC2 to read parameters from Parameter Store
-# WHY: So application can fetch secrets (API keys, passwords, config)
-# without hardcoding them in code
-
-# SECURITY NOTE:
-# - Only allows GetParameter (read-only)
-# - Only for our specific project parameters
-# - Cannot create, update, or delete parameters
-# - Cannot access other applications' parameters
+# Allows EC2 instances to read secrets from AWS Systems Manager Parameter Store
+# This includes database passwords, API keys, and other sensitive configuration
 
 resource "aws_iam_role_policy" "ec2_ssm_access" {
   name = "${local.name_prefix}-ec2-ssm-policy"
   role = aws_iam_role.ec2.id
 
-  # Policy: Allow reading parameters from SSM Parameter Store
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
         Action = [
-          "ssm:GetParameter",        # Read a single parameter
-          "ssm:GetParameters",       # Read multiple parameters at once
-          "ssm:GetParametersByPath"  # Read all parameters under a path
+          "ssm:GetParameter",         # Read single parameter
+          "ssm:GetParameters",        # Read multiple parameters
+          "ssm:GetParametersByPath"   # Read all parameters under a path
         ]
-        # Restrict to only our project's parameters
-        # Supports both hierarchical (/codedetect/prod/*) and flat (codedetect-prod-*) naming
+        # Restrict to only this project's parameters
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.app_name}/${var.environment}/*",
           "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.app_name}-${var.environment}-*"
@@ -400,25 +228,28 @@ resource "aws_iam_role_policy" "ec2_ssm_access" {
       {
         Effect = "Allow"
         Action = [
-          "ssm:DescribeParameters" # List parameters (doesn't expose values)
+          "ssm:DescribeParameters"  # List parameters (doesn't expose values)
         ]
-        Resource = "*" # This action doesn't support resource-level permissions
+        Resource = "*"
       },
       {
-        # Allow decryption of SecureString parameters
-        # SecureString parameters are encrypted with KMS
         Effect = "Allow"
         Action = [
-          "kms:Decrypt" # Decrypt SecureString values
+          "kms:Decrypt"  # Decrypt SecureString parameters
         ]
-        # Default AWS managed key for SSM
+        # Use default AWS managed key for SSM
         Resource = "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/alias/aws/ssm"
       }
     ]
   })
 }
 
-# Instance profile (wrapper for the role)
+# ----------------------------------------------------------------------------
+# IAM INSTANCE PROFILE
+# ----------------------------------------------------------------------------
+# Wrapper that attaches the IAM role to EC2 instances
+# EC2 instances reference this profile, not the role directly
+
 resource "aws_iam_instance_profile" "ec2" {
   name = "${local.name_prefix}-ec2-profile"
   role = aws_iam_role.ec2.name
@@ -427,62 +258,29 @@ resource "aws_iam_instance_profile" "ec2" {
 }
 
 # ============================================================================
-# EC2 EXPLANATION
+# NOTES
 # ============================================================================
-
-# WHAT IS EC2?
-# - Elastic Compute Cloud
-# - Virtual server in the cloud
-# - Like renting a computer in AWS data center
-
-# AMI (Amazon Machine Image):
-# - Template for your EC2 instance
-# - Includes OS (operating system) and pre-installed software
-# - We use Amazon Linux 2 (optimized for AWS, free, secure)
-
-# INSTANCE TYPES:
-# - t3.micro = 2 vCPU, 1 GB RAM (what we're using)
-# - t3 family = burstable (can use extra CPU when needed)
-# - Good for apps with variable load
-
-# USER DATA:
-# - Script that runs ONCE when instance first starts
-# - We use it to install Docker automatically
-# - Saves manual setup time
-
-# ELASTIC IP:
-# - Static public IP address
-# - Doesn't change when you stop/start instance
-# - Needed so your domain always points to same IP
-# - Free as long as it's attached to running instance
-
-# IAM ROLE:
-# - Allows EC2 to access other AWS services
-# - Better than hardcoding AWS keys in your code
-# - We use it so EC2 can write files to S3
-
-# ROOT VOLUME:
-# - The hard drive for your EC2 instance
-# - gp3 = fast SSD storage
-# - 20 GB is enough for OS + Docker + your app
-
-# MONITORING:
-# - Basic = Free, 5-minute intervals
-# - Detailed = Costs extra, 1-minute intervals
-# - We use basic (var.enable_monitoring = false)
-
-# ============================================================================
-
-# ----------------------------------------------------------------------------
-# HOW TO ACCESS YOUR EC2 INSTANCE
-# ----------------------------------------------------------------------------
-
-# After Terraform creates it, SSH in with:
-# ssh -i codedetect-key ec2-user@YOUR_ELASTIC_IP
-
-# Then deploy your app:
-# cd /home/ec2-user/app
-# git clone https://github.com/yourusername/codedetect.git .
-# docker-compose up -d
-
+#
+# ARCHITECTURE EVOLUTION:
+# - Phase 1: Single EC2 instance with local SQLite database
+# - Phase 2: EFS for shared database between instances (removed)
+# - Phase 3: RDS PostgreSQL for managed database (current)
+# - Phase 4: Auto Scaling Group for high availability
+#
+# WHY RDS INSTEAD OF EFS:
+# - RDS is managed (automatic backups, updates, failover)
+# - Better performance for database workloads
+# - Simpler setup (no file locking issues)
+# - Multi-AZ support for high availability (I used only one az for cost optimization for this project)
+#
+# WHY S3 INSTEAD OF EFS:
+# - S3 is cheaper for file storage ($0.023/GB vs $0.30/GB)
+# - Lifecycle policies for automatic cleanup
+# - Better for temporary uploads (7-day retention)
+#
+# IAM ROLE VS HARDCODED CREDENTIALS:
+# - IAM role is more secure (no credentials in code or config files)
+# - Credentials rotate automatically
+# - Can be easily audited and restricted
+#
 # ============================================================================

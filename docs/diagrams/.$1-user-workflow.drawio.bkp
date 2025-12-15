@@ -1,0 +1,113 @@
+<mxfile host="app.diagrams.net" modified="2025-12-14T00:00:00.000Z" agent="draw.io" version="22.1.11">
+  <diagram name="User Workflow" id="user-workflow">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="1. USER WORKFLOW" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="440" y="40" width="280" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- User -->
+        <mxCell id="user" value="User" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="80" y="200" width="60" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Upload Code -->
+        <mxCell id="upload" value="Upload Python Code&#xa;(Paste or File Upload)&#xa;Max 5MB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="220" y="220" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: User to Upload -->
+        <mxCell id="arrow1" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="user" target="upload">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="260" as="sourcePoint" />
+            <mxPoint x="210" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- S3 Bucket -->
+        <mxCell id="s3" value="AWS S3 Bucket&#xa;(Temporary Storage)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="450" y="210" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Upload to S3 -->
+        <mxCell id="arrow2" value="Store file" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;" edge="1" parent="1" source="upload" target="s3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="380" y="260" as="sourcePoint" />
+            <mxPoint x="430" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Analysis Engine -->
+        <mxCell id="analysis" value="Analysis Engine&#xa;• Pylint (Quality)&#xa;• Bandit (Security)&#xa;• Radon (Complexity)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="640" y="205" width="180" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: S3 to Analysis -->
+        <mxCell id="arrow3" value="Read file" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="s3" target="analysis">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="260" as="sourcePoint" />
+            <mxPoint x="620" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SQLite on EFS -->
+        <mxCell id="sqlite" value="SQLite Database&#xa;on EFS&#xa;/mnt/efs/database/&#xa;codedetect.db&#xa;&#xa;(Aggregate metrics only)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="890" y="190" width="160" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: Analysis to SQLite -->
+        <mxCell id="arrow4" value="Save results" style="endArrow=classic;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;" edge="1" parent="1" source="analysis" target="sqlite">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="820" y="260" as="sourcePoint" />
+            <mxPoint x="870" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Dashboard -->
+        <mxCell id="dashboard" value="Results Dashboard&#xa;• Code Quality Score&#xa;• Security Issues&#xa;• Complexity Metrics&#xa;• Analysis History" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="640" y="420" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow: SQLite to Dashboard -->
+        <mxCell id="arrow5" value="Query history" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="sqlite" target="dashboard">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="970" y="350" as="sourcePoint" />
+            <mxPoint x="820" y="480" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="970" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrow: Analysis to Dashboard (direct) -->
+        <mxCell id="arrow6" value="Show results&#xa;&lt;5 seconds" style="endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="1" source="analysis" target="dashboard">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="730" y="340" as="sourcePoint" />
+            <mxPoint x="780" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrow: Dashboard to User -->
+        <mxCell id="arrow7" value="View results" style="endArrow=classic;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;dashed=1;" edge="1" parent="1" source="dashboard" target="user">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="480" as="sourcePoint" />
+            <mxPoint x="450" y="430" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="110" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Privacy Note -->
+        <mxCell id="privacy" value="Privacy: Only aggregate metrics stored&#xa;NO code content saved in database" style="text;html=1;strokeColor=#d79b00;fillColor=#ffe6cc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="860" y="360" width="220" height="50" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
