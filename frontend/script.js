@@ -729,11 +729,6 @@ function showSection(sectionName) {
     });
     event.target.closest('.sidebar-item')?.classList.add('active');
 
-    // Load history when history section is opened
-    if (sectionName === 'history') {
-        loadFullHistory();
-    }
-
     // Update dashboard stats when dashboard is opened
     if (sectionName === 'dashboard') {
         updateDashboardStats();
@@ -947,17 +942,11 @@ async function updateDashboardStats() {
         const data = await response.json();
 
         if (data) {
-            // Show stats grid if we have data
-            const statsGridContainer = document.getElementById('stats-grid-container');
-            if (data.total_analyses > 0 && statsGridContainer) {
-                statsGridContainer.style.display = 'block';
-
-                // Update stat cards
-                document.getElementById('dashTotalAnalyses').textContent = data.total_analyses;
-                document.getElementById('dashAvgScore').textContent = data.avg_score || '--';
-                document.getElementById('dashSecurityIssues').textContent = data.total_security_issues;
-                document.getElementById('dashQualityIssues').textContent = data.total_quality_issues;
-            }
+            // Update stat cards (always update, even if 0)
+            document.getElementById('dashTotalAnalyses').textContent = data.total_analyses || 0;
+            document.getElementById('dashAvgScore').textContent = data.avg_score || '--';
+            document.getElementById('dashSecurityIssues').textContent = data.total_security_issues || 0;
+            document.getElementById('dashQualityIssues').textContent = data.total_quality_issues || 0;
 
             // Create trend charts if we have data
             if (data.trend_data && data.trend_data.length > 0) {
@@ -1179,48 +1168,6 @@ async function loadRecentHistory() {
         console.error('Failed to load recent history:', error);
         document.getElementById('recentHistoryLoading').style.display = 'none';
         document.getElementById('recentHistoryEmpty').style.display = 'block';
-    }
-}
-
-// Load full history for history page
-async function loadFullHistory() {
-    try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
-
-        const loading = document.getElementById('historyLoading');
-        const empty = document.getElementById('historyEmpty');
-        const table = document.getElementById('historyTable');
-        const tbody = document.getElementById('historyTableBody');
-
-        if (!data || !data.trend_data || data.trend_data.length === 0) {
-            loading.style.display = 'none';
-            empty.style.display = 'block';
-            return;
-        }
-
-        // Show all records (reversed to show newest first)
-        const allRecords = data.trend_data.slice().reverse();
-
-        tbody.innerHTML = allRecords.map((record, index) => `
-            <tr>
-                <td>${allRecords.length - index}</td>
-                <td>${new Date(record.timestamp).toLocaleString()}</td>
-                <td><code>${record.file_hash ? record.file_hash.substring(0, 12) + '...' : 'N/A'}</code></td>
-                <td><span class="badge bg-${record.score >= 80 ? 'success' : record.score >= 60 ? 'warning' : 'danger'}">${record.score}</span></td>
-                <td>${record.security_issues}</td>
-                <td>${record.total_issues}</td>
-                <td>${record.complexity_issues}</td>
-                <td>${record.s3_bucket && record.s3_key ? `<code>s3://${record.s3_bucket}/${record.s3_key.substring(0, 20)}...</code>` : 'N/A'}</td>
-            </tr>
-        `).join('');
-
-        loading.style.display = 'none';
-        table.style.display = 'block';
-    } catch (error) {
-        console.error('Failed to load full history:', error);
-        document.getElementById('historyLoading').style.display = 'none';
-        document.getElementById('historyEmpty').style.display = 'block';
     }
 }
 
