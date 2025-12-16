@@ -272,7 +272,8 @@ resource "aws_iam_instance_profile" "ec2" {
 # - Better performance for database workloads
 # - Simpler setup (no file locking issues)
 # - Multi-AZ support for high availability (I used only one az for cost optimization for this project)
-#
+# - Rds keeps the data safe even if ec2 instance fails or terminated
+
 # WHY S3 INSTEAD OF EFS:
 # - S3 is cheaper for file storage ($0.023/GB vs $0.30/GB)
 # - Lifecycle policies for automatic cleanup

@@ -299,27 +299,3 @@ variable "enable_monitoring" {
   # false = Basic monitoring only (free)
 }
 
-# ============================================================================
-# HOW TO USE THESE VARIABLES
-# ============================================================================
-
-# METHOD 1: Use default values (easiest)
-# Just run: terraform apply
-# It will use all the default values above
-
-# METHOD 2: Override via command line
-# terraform apply -var="instance_type=t3.medium" -var="environment=dev"
-
-# METHOD 3: Create terraform.tfvars file (recommended)
-# Create file: terraform.tfvars
-# Add your values:
-#   aws_region = "us-west-2"
-#   owner_email = "you@email.com"
-#   domain_name = "yourdomain.com"
-#   db_password = "YourSecurePassword123!"
-
-# METHOD 4: Use environment variables
-# export TF_VAR_db_password="SecurePassword123"
-# terraform apply
-
-# ============================================================================

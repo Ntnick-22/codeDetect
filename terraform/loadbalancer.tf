@@ -303,9 +303,9 @@ resource "aws_autoscaling_group" "blue" {
   # desired_capacity = var.active_environment == "blue" ? 1 : 0
 
   # DEMO MODE (uncomment below for presentation - 2 instances per environment)
-  min_size         = var.active_environment == "blue" ? 2 : 0
-  max_size         = var.active_environment == "blue" ? 4 : 0
-  desired_capacity = var.active_environment == "blue" ? 2 : 0
+  min_size         = var.active_environment == "blue" ? 1 : 0
+  max_size         = var.active_environment == "blue" ? 2 : 0
+  desired_capacity = var.active_environment == "blue" ? 1 : 0
 
   # Health check configuration
   health_check_type         = "ELB" # Use load balancer health checks
@@ -374,9 +374,9 @@ resource "aws_autoscaling_group" "green" {
   # desired_capacity = var.active_environment == "green" ? 1 : 0
 
   # DEMO MODE (uncomment below for presentation - 2 instances per environment)
-  min_size         = var.active_environment == "green" ? 2 : 0
-  max_size         = var.active_environment == "green" ? 4 : 0
-  desired_capacity = var.active_environment == "green" ? 2 : 0
+  min_size         = var.active_environment == "green" ? 1 : 0
+  max_size         = var.active_environment == "green" ? 2 : 0
+  desired_capacity = var.active_environment == "green" ? 1 : 0
 
   # Health check configuration
   health_check_type         = "ELB"

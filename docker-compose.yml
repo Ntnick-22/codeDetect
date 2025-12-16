@@ -61,12 +61,12 @@ services:
 # ARCHITECTURE:
 # - Database: RDS PostgreSQL (managed, Multi-AZ, automatic backups)
 # - File Storage: S3 (cheap, durable, lifecycle policies)
-# - No EFS needed (deprecated)
-#
+#  - Application: Docker container on EC2 behind ALB
+#    -
 # ENVIRONMENT VARIABLES:
 # All sensitive values (DB password, SNS ARN) are fetched from AWS Parameter
 # Store by the EC2 user data script and written to .env file
-#
+# 
 # LOCAL DEVELOPMENT:
 # Create a .env file with:
 #   DATABASE_URL=sqlite:///codedetect.db

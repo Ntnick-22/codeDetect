@@ -67,9 +67,9 @@
                         <i class="bi bi-cloud-upload"></i>
                         <span>Upload & Analyze</span>
                     </a>
-                    <a href="#" class="sidebar-item" onclick="showSection('analytics')">
-                        <i class="bi bi-bar-chart"></i>
-                        <span>Analytics</span>
+                    <a href="#" class="sidebar-item" onclick="showSection('history')">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Analysis History</span>
                     </a>
                     <a href="#" class="sidebar-item" onclick="showSection('deployment')">
                         <i class="bi bi-server"></i>
@@ -157,20 +157,43 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="aws-card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-info-circle me-2"></i>Quick Start</h5>
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="bi bi-clock-history me-2"></i>Recent Analysis History</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="showSection('history')">
+                                    <i class="bi bi-arrow-right me-1"></i>View All
+                                </button>
                             </div>
                             <div class="card-body">
-                                <p>Welcome to CodeDetect - Your automated Python code quality analyzer.</p>
-                                <ol>
-                                    <li>Navigate to <strong>Upload & Analyze</strong> to check your Python code</li>
-                                    <li>View detailed analysis results with security and quality metrics</li>
-                                    <li>Check <strong>Analysis History</strong> to see past results</li>
-                                    <li>Monitor <strong>Deployment Info</strong> for infrastructure status</li>
-                                </ol>
-                                <button class="btn btn-primary" onclick="showSection('upload')">
-                                    <i class="bi bi-cloud-upload me-2"></i>Start Analysis
-                                </button>
+                                <div id="recentHistoryLoading" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <p class="mt-2 text-muted">Loading recent analyses...</p>
+                                </div>
+                                <div id="recentHistoryEmpty" class="text-center py-4" style="display: none;">
+                                    <i class="bi bi-inbox display-1 text-muted"></i>
+                                    <p class="mt-3 text-muted">No analyses yet. Upload a Python file to get started!</p>
+                                    <button class="btn btn-primary mt-2" onclick="showSection('upload')">
+                                        <i class="bi bi-cloud-upload me-2"></i>Upload File
+                                    </button>
+                                </div>
+                                <div id="recentHistoryTable" style="display: none;">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Timestamp</th>
+                                                    <th>Score</th>
+                                                    <th>Security</th>
+                                                    <th>Quality</th>
+                                                    <th>Complexity</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="recentHistoryBody">
+                                                <!-- Populated by JavaScript -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -280,60 +303,47 @@
                 </div>
             </div>
 
-            <!-- Analytics Section -->
-            <div id="section-analytics" class="content-section">
+            <!-- Analysis History Section -->
+            <div id="section-history" class="content-section">
                 <div class="content-header">
-                    <h2><i class="bi bi-bar-chart me-2"></i>Platform Analytics</h2>
-                    <p class="text-muted">Aggregate statistics from all code analyses (privacy-first, anonymous data)</p>
+                    <h2><i class="bi bi-clock-history me-2"></i>Analysis History</h2>
+                    <p class="text-muted">Complete history of all code analyses</p>
                 </div>
 
-                <!-- Key Metrics -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="aws-card">
-                            <div class="card-body text-center">
-                                <i class="bi bi-file-code display-4 text-primary"></i>
-                                <h3 class="mt-3 mb-0" id="total-analyses">-</h3>
-                                <p class="text-muted mb-0">Total Analyses</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="aws-card">
-                            <div class="card-body text-center">
-                                <i class="bi bi-star display-4 text-success"></i>
-                                <h3 class="mt-3 mb-0" id="avg-score">-</h3>
-                                <p class="text-muted mb-0">Avg Quality Score</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="aws-card">
-                            <div class="card-body text-center">
-                                <i class="bi bi-shield-exclamation display-4 text-danger"></i>
-                                <h3 class="mt-3 mb-0" id="total-security">-</h3>
-                                <p class="text-muted mb-0">Security Issues</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="aws-card">
-                            <div class="card-body text-center">
-                                <i class="bi bi-bug display-4 text-warning"></i>
-                                <h3 class="mt-3 mb-0" id="total-quality">-</h3>
-                                <p class="text-muted mb-0">Quality Issues</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Trends Chart -->
                 <div class="aws-card">
-                    <div class="card-header">
-                        <h5><i class="bi bi-graph-up me-2"></i>Quality Trends (Last 10 Analyses)</h5>
-                    </div>
                     <div class="card-body">
-                        <canvas id="trendsChart" height="80"></canvas>
+                        <div id="historyLoading" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-3 text-muted">Loading analysis history...</p>
+                        </div>
+                        <div id="historyEmpty" class="text-center py-5" style="display: none;">
+                            <i class="bi bi-inbox display-1 text-muted"></i>
+                            <p class="mt-3 text-muted">No analyses found. Upload a Python file to get started!</p>
+                            <button class="btn btn-primary mt-3" onclick="showSection('upload')">
+                                <i class="bi bi-cloud-upload me-2"></i>Upload File
+                            </button>
+                        </div>
+                        <div id="historyTable" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Timestamp</th>
+                                            <th>File Hash</th>
+                                            <th>Score</th>
+                                            <th>Security</th>
+                                            <th>Quality</th>
+                                            <th>Complexity</th>
+                                            <th>S3 Location</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <!-- Populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -364,7 +374,7 @@
                                     <tr><td><strong>Environment:</strong></td><td><span class="badge bg-success">Production</span></td></tr>
                                     <tr><td><strong>Auto Scaling:</strong></td><td>2-4 instances</td></tr>
                                     <tr><td><strong>Load Balancer:</strong></td><td>Application LB</td></tr>
-                                    <tr><td><strong>Storage:</strong></td><td>EFS (Shared)</td></tr>
+                                    <tr><td><strong>Storage:</strong></td><td>S3 + PostgreSQL</td></tr>
                                     <tr><td><strong>Monitoring:</strong></td><td>CloudWatch Active</td></tr>
                                 </table>
                             </div>
@@ -411,7 +421,7 @@
                                 <ul>
                                     <li>Python 3.12</li>
                                     <li>Flask Framework</li>
-                                    <li>SQLite + EFS</li>
+                                    <li>RDS PostgreSQL</li>
                                 </ul>
                             </div>
                             <div class="col-md-3">
@@ -419,7 +429,7 @@
                                 <ul>
                                     <li>EC2 Auto Scaling</li>
                                     <li>Application LB</li>
-                                    <li>S3 & EFS</li>
+                                    <li>S3 & RDS PostgreSQL</li>
                                 </ul>
                             </div>
                             <div class="col-md-3">
