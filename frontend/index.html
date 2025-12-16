@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeDetect - Code Quality Analyzer App
+    <title>CodeDetect - Code Quality Analyzer App</title>
 
-    </title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="codedetect_favicon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="codedetect_favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="codedetect_favicon.png">
+    <link rel="shortcut icon" href="codedetect_favicon.png">
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -155,8 +159,17 @@
                         <div class="aws-card">
                             <div class="card-header">
                                 <h5><i class="bi bi-clock-history me-2"></i>Recent Analysis History</h5>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-shield-check text-success"></i> Private to your session - Only you can see your uploads
+                                </small>
                             </div>
                             <div class="card-body">
+                                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Privacy Notice:</strong> Your analysis results are stored anonymously in our database for platform analytics.
+                                    The history below is private to your current session and is not shared with other users.
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
                                 <div id="recentHistoryLoading" class="text-center py-4">
                                     <div class="spinner-border text-primary" role="status"></div>
                                     <p class="mt-2 text-muted">Loading recent analyses...</p>
@@ -403,7 +416,7 @@
                     Former RF test Engineer | Cloud & DevOps Enthusiast</p>
 
                     <h6 class="text-primary mt-3">Project Purpose</h6>
-                    <p>This is my final year college project demonstrating comprehensive skills in:</p>
+                    <p>This is my college project demonstrating comprehensive skills in:</p>
                     <ul>
                         <li>Full Stack Development (Frontend + Backend)</li>
                         <li>Cloud Infrastructure (AWS)</li>

@@ -351,14 +351,23 @@ function displayResults(data) {
     // Store data for download
     currentAnalysisData = data;
 
+    // Save to session history
+    saveAnalysisToSession({
+        score: data.score,
+        security_issues: data.summary?.security_issues || 0,
+        total_issues: data.summary?.total_issues || 0,
+        complexity_issues: data.summary?.high_complexity_functions || 0,
+        filename: selectedFile?.name || 'Unknown'
+    });
+
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) {
         downloadBtn.style.display = 'inline-block';
     }
-    
+
     // Show results section
     document.getElementById('results').style.display = 'block';
-    
+
     // Update score
     const score = data.score;
     const scoreCircle = document.getElementById('scoreCircle');
@@ -1127,51 +1136,71 @@ function showNoDataMessage(canvasId, message) {
     }
 }
 
-// Load recent history for dashboard (last 5 records)
-async function loadRecentHistory() {
-    try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
+// Load recent history for dashboard (session-based - only this user's uploads)
+function loadRecentHistory() {
+    const loading = document.getElementById('recentHistoryLoading');
+    const empty = document.getElementById('recentHistoryEmpty');
+    const table = document.getElementById('recentHistoryTable');
+    const tbody = document.getElementById('recentHistoryBody');
 
-        const loading = document.getElementById('recentHistoryLoading');
-        const empty = document.getElementById('recentHistoryEmpty');
-        const table = document.getElementById('recentHistoryTable');
-        const tbody = document.getElementById('recentHistoryBody');
+    // Get history from sessionStorage
+    const historyJson = sessionStorage.getItem('analysisHistory');
+    const history = historyJson ? JSON.parse(historyJson) : [];
 
-        if (!data || !data.trend_data || data.trend_data.length === 0) {
-            loading.style.display = 'none';
-            empty.style.display = 'block';
-            return;
-        }
+    loading.style.display = 'none';
 
-        // Show last 5 records
-        const recentRecords = data.trend_data.slice(-5).reverse();
-
-        tbody.innerHTML = recentRecords.map(record => `
-            <tr>
-                <td>${new Date(record.timestamp).toLocaleString()}</td>
-                <td><span class="badge bg-${record.score >= 80 ? 'success' : record.score >= 60 ? 'warning' : 'danger'}">${record.score}</span></td>
-                <td>${record.security_issues}</td>
-                <td>${record.total_issues}</td>
-                <td>${record.complexity_issues}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="viewAnalysisDetails(${record.id})">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-        loading.style.display = 'none';
-        table.style.display = 'block';
-    } catch (error) {
-        console.error('Failed to load recent history:', error);
-        document.getElementById('recentHistoryLoading').style.display = 'none';
-        document.getElementById('recentHistoryEmpty').style.display = 'block';
+    if (history.length === 0) {
+        empty.style.display = 'block';
+        table.style.display = 'none';
+        return;
     }
+
+    // Show last 5 records, newest first
+    const recentRecords = history.slice(-5).reverse();
+
+    tbody.innerHTML = recentRecords.map((record, index) => `
+        <tr>
+            <td>${new Date(record.timestamp).toLocaleString()}</td>
+            <td><span class="badge bg-${record.score >= 80 ? 'success' : record.score >= 60 ? 'warning' : 'danger'}">${record.score}</span></td>
+            <td>${record.security_issues || 0}</td>
+            <td>${record.total_issues || 0}</td>
+            <td>${record.complexity_issues || 0}</td>
+            <td>
+                <span class="badge bg-secondary">Session ${history.length - index}</span>
+            </td>
+        </tr>
+    `).join('');
+
+    empty.style.display = 'none';
+    table.style.display = 'block';
 }
 
-// View analysis details (placeholder for future feature)
-function viewAnalysisDetails(id) {
-    alert(`Viewing details for analysis #${id}. This feature will be implemented in a future update.`);
+// Save analysis result to sessionStorage
+function saveAnalysisToSession(analysisData) {
+    try {
+        const historyJson = sessionStorage.getItem('analysisHistory');
+        const history = historyJson ? JSON.parse(historyJson) : [];
+
+        // Add new analysis
+        history.push({
+            timestamp: new Date().toISOString(),
+            score: analysisData.score || 0,
+            security_issues: analysisData.security_issues || 0,
+            total_issues: analysisData.total_issues || 0,
+            complexity_issues: analysisData.complexity_issues || 0,
+            filename: analysisData.filename || 'Unknown'
+        });
+
+        // Keep only last 20 records
+        if (history.length > 20) {
+            history.shift();
+        }
+
+        sessionStorage.setItem('analysisHistory', JSON.stringify(history));
+
+        // Refresh the recent history display
+        loadRecentHistory();
+    } catch (error) {
+        console.error('Failed to save to sessionStorage:', error);
+    }
 }
