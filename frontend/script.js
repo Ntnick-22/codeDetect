@@ -408,13 +408,36 @@ function displayIssues(analysis) {
     const issuesList = document.getElementById('issuesList');
     issuesList.innerHTML = '';
 
-    // Security issues
-    if (analysis.security_issues && analysis.security_issues.length > 0) {
-        issuesList.innerHTML += '<h6 class="text-danger mt-3"><i class="bi bi-shield-exclamation me-2"></i>Security Issues:</h6>';
+    const hasSecurityIssues = analysis.security_issues && analysis.security_issues.length > 0;
+    const hasQualityIssues = analysis.quality_issues && analysis.quality_issues.length > 0;
+    const hasComplexityIssues = analysis.summary && analysis.summary.high_complexity_functions > 0;
+
+    if (!hasSecurityIssues && !hasQualityIssues && !hasComplexityIssues) {
+        issuesList.innerHTML = '<p class="text-success">No major issues found! Great job!</p>';
+        return;
+    }
+
+    // Create accordion container
+    let accordionHTML = '<div class="accordion" id="issuesAccordion">';
+
+    // Security Issues Accordion Item
+    if (hasSecurityIssues) {
+        accordionHTML += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingSecurity">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSecurity" aria-expanded="true" aria-controls="collapseSecurity">
+                        <i class="bi bi-shield-exclamation me-2 text-danger"></i>
+                        <span class="text-danger fw-bold">Security Issues (${analysis.security_issues.length})</span>
+                    </button>
+                </h2>
+                <div id="collapseSecurity" class="accordion-collapse collapse show" aria-labelledby="headingSecurity" data-bs-parent="#issuesAccordion">
+                    <div class="accordion-body">
+        `;
+
         analysis.security_issues.forEach((issue, index) => {
             const issueId = `security-${index}`;
             const suggestion = getSuggestion(issue.test_id || 'default');
-            issuesList.innerHTML += `
+            accordionHTML += `
                 <div class="alert alert-danger mb-2">
                     <span class="issue-badge severity-${issue.issue_severity}">${issue.issue_severity}</span>
                     <span class="issue-badge">Confidence: ${issue.issue_confidence}</span>
@@ -436,20 +459,35 @@ function displayIssues(analysis) {
                 </div>
             `;
         });
+
+        accordionHTML += `
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
-    // Quality issues
-    if (analysis.quality_issues && analysis.quality_issues.length > 0) {
-        issuesList.innerHTML += '<h6 class="text-primary mt-3"><i class="bi bi-code-square me-2"></i>Code Quality Issues:</h6>';
-
+    // Quality Issues Accordion Item
+    if (hasQualityIssues) {
         const displayIssues = analysis.quality_issues.slice(0, 10);
+        accordionHTML += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingQuality">
+                    <button class="accordion-button ${hasSecurityIssues ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseQuality" aria-expanded="${!hasSecurityIssues}" aria-controls="collapseQuality">
+                        <i class="bi bi-code-square me-2 text-primary"></i>
+                        <span class="text-primary fw-bold">Code Quality Issues (${analysis.quality_issues.length})</span>
+                    </button>
+                </h2>
+                <div id="collapseQuality" class="accordion-collapse collapse ${!hasSecurityIssues ? 'show' : ''}" aria-labelledby="headingQuality" data-bs-parent="#issuesAccordion">
+                    <div class="accordion-body">
+        `;
 
         displayIssues.forEach((issue, index) => {
             const issueId = `quality-${index}`;
             const alertClass = issue.type === 'error' ? 'danger' : issue.type === 'warning' ? 'warning' : 'info';
             const suggestion = getSuggestion(issue.symbol || 'default');
 
-            issuesList.innerHTML += `
+            accordionHTML += `
                 <div class="alert alert-${alertClass} mb-2">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -476,7 +514,7 @@ function displayIssues(analysis) {
         });
 
         if (analysis.quality_issues.length > 10) {
-            issuesList.innerHTML += `
+            accordionHTML += `
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i>
                     <strong>${analysis.quality_issues.length - 10} more issues found.</strong>
@@ -484,11 +522,38 @@ function displayIssues(analysis) {
                 </div>
             `;
         }
+
+        accordionHTML += `
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
-    if (issuesList.innerHTML === '') {
-        issuesList.innerHTML = '<p class="text-success">No major issues found! Great job!</p>';
+    // Complexity Issues Accordion Item (if we want to show this separately)
+    if (hasComplexityIssues && analysis.complexity_details) {
+        accordionHTML += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingComplexity">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseComplexity" aria-expanded="false" aria-controls="collapseComplexity">
+                        <i class="bi bi-graph-up me-2 text-warning"></i>
+                        <span class="text-warning fw-bold">Complexity Issues (${analysis.summary.high_complexity_functions})</span>
+                    </button>
+                </h2>
+                <div id="collapseComplexity" class="accordion-collapse collapse" aria-labelledby="headingComplexity" data-bs-parent="#issuesAccordion">
+                    <div class="accordion-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Found ${analysis.summary.high_complexity_functions} function(s) with high complexity. Consider refactoring to improve maintainability.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
+
+    accordionHTML += '</div>';
+    issuesList.innerHTML = accordionHTML;
 }
 
 // Create charts function
@@ -944,30 +1009,39 @@ async function loadVersionBadge() {
 }
 
 
-// Update dashboard statistics
-async function updateDashboardStats() {
-    try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
+// Update dashboard statistics (session-based)
+function updateDashboardStats() {
+    // Get history from sessionStorage
+    const historyJson = sessionStorage.getItem('analysisHistory');
+    const history = historyJson ? JSON.parse(historyJson) : [];
 
-        if (data) {
-            // Update stat cards (always update, even if 0)
-            document.getElementById('dashTotalAnalyses').textContent = data.total_analyses || 0;
-            document.getElementById('dashAvgScore').textContent = data.avg_score || '--';
-            document.getElementById('dashSecurityIssues').textContent = data.total_security_issues || 0;
-            document.getElementById('dashQualityIssues').textContent = data.total_quality_issues || 0;
+    // Calculate stats from session data
+    const totalAnalyses = history.length;
+    const avgScore = totalAnalyses > 0
+        ? Math.round(history.reduce((sum, item) => sum + (item.score || 0), 0) / totalAnalyses)
+        : '--';
+    const totalSecurity = history.reduce((sum, item) => sum + (item.security_issues || 0), 0);
+    const totalQuality = history.reduce((sum, item) => sum + (item.total_issues || 0), 0);
 
-            // Create trend charts if we have data
-            if (data.trend_data && data.trend_data.length > 0) {
-                createDashboardTrendCharts(data.trend_data);
-            } else {
-                // Show "no data" message in charts
-                showNoDataMessage('scoreTrendChart', 'No trend data available yet');
-                showNoDataMessage('issuesTrendChart', 'No trend data available yet');
-            }
-        }
-    } catch (error) {
-        console.error('Failed to update dashboard stats:', error);
+    // Update stat cards
+    document.getElementById('dashTotalAnalyses').textContent = totalAnalyses;
+    document.getElementById('dashAvgScore').textContent = avgScore;
+    document.getElementById('dashSecurityIssues').textContent = totalSecurity;
+    document.getElementById('dashQualityIssues').textContent = totalQuality;
+
+    // Show/hide charts vs welcome card based on data
+    const chartsWelcome = document.getElementById('chartsWelcome');
+    const chartsSection = document.getElementById('chartsSection');
+
+    if (history.length > 0) {
+        // User has data - show charts
+        if (chartsWelcome) chartsWelcome.style.display = 'none';
+        if (chartsSection) chartsSection.style.display = 'flex';
+        createDashboardTrendCharts(history);
+    } else {
+        // No data - show welcome card
+        if (chartsWelcome) chartsWelcome.style.display = 'flex';
+        if (chartsSection) chartsSection.style.display = 'none';
     }
 }
 
@@ -1198,7 +1272,8 @@ function saveAnalysisToSession(analysisData) {
 
         sessionStorage.setItem('analysisHistory', JSON.stringify(history));
 
-        // Refresh the recent history display
+        // Refresh both the dashboard stats and recent history display
+        updateDashboardStats();
         loadRecentHistory();
     } catch (error) {
         console.error('Failed to save to sessionStorage:', error);
